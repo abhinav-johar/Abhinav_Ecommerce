@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    <!-- Banner -->
+    <div class="mb-4 rounded-3 text-center text-white position-relative overflow-hidden"
+         style="background-image: url('{{ url_for('static', filename='images/banners/banner.webp') }}');
+                background-size: cover; background-position: center; min-height: 350px;">
+        <div class="position-absolute top-0 start-0 w-100 h-100" style="background-color: rgba(0,0,0,0.4);"></div>
+        <div class="position-relative d-flex flex-column justify-content-center align-items-center h-100 py-5">
+            <h1 class="display-5 fw-bold">Welcome to One8</h1>
+            <p class="fs-5">Quality fashion, delivered to your door.</p>
+            <a href="{{ url_for('main.product_list') }}" class="btn btn-light btn-lg mt-2">Shop Now</a>
+        </div>
+    </div>
+
+    <!-- Categories -->
+    <h4 class="mb-3">Shop by Category</h4>
+    <div class="row mb-5">
+        {% for category in categories %}
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('main.product_list', category=category.slug) }}" class="text-decoration-none">
+                <div class="card text-center h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title text-dark mb-0">{{ category.name }}</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Featured Products -->
+    <h4 class="mb-3">Featured Products</h4>
+    <div class="row">
+        {% for product in products %}
+        <div class="col-6 col-md-3 mb-4">
+            <div class="card h-100 shadow-sm">
+                <a href="{{ url_for('main.product_detail', product_id=product.id) }}">
+                    <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}"
+                         class="card-img-top" alt="{{ product.name }}" style="height:200px; object-fit:cover;">
+                </a>
+                <div class="card-body">
+                    <h6 class="card-title text-truncate">{{ product.name }}</h6>
+                    <p class="mb-0">
+                        {% if product.discount_price %}
+                            <span class="text-decoration-line-through text-muted">₹{{ '%.0f' % product.price }}</span>
+                            <span class="fw-bold text-success">₹{{ '%.0f' % product.discount_price }}</span>
+                        {% else %}
+                            <span class="fw-bold">₹{{ '%.0f' % product.price }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted">No products yet. Run <code>python seed.py</code> to add sample data.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

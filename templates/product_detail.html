@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x500?text=No+Image' }}"
+             class="img-fluid rounded shadow-sm" alt="{{ product.name }}">
+    </div>
+
+    <div class="col-md-6">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.product_list', category=product.category.slug) }}">{{ product.category.name }}</a></li>
+                <li class="breadcrumb-item active">{{ product.name }}</li>
+            </ol>
+        </nav>
+
+        <h2>{{ product.name }}</h2>
+
+        <p class="fs-4">
+            {% if product.discount_price %}
+                <span class="text-decoration-line-through text-muted">₹{{ '%.0f' % product.price }}</span>
+                <span class="fw-bold text-success">₹{{ '%.0f' % product.discount_price }}</span>
+            {% else %}
+                <span class="fw-bold">₹{{ '%.0f' % product.price }}</span>
+            {% endif %}
+        </p>
+
+        <p class="text-muted">{{ product.description }}</p>
+
+        {% if product.variants %}
+        <form action="{{ url_for('cart.view_cart') }}" method="POST" class="mt-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            {% set sizes = product.variants|map(attribute='size')|unique|list %}
+            {% if sizes and sizes[0] %}
+            <div class="mb-3">
+                <label class="form-label fw-bold">Size</label>
+                <div class="btn-group d-block" role="group">
+                    {% for size in sizes %}
+                    <input type="radio" class="btn-check" name="size" id="size-{{ size }}" value="{{ size }}" autocomplete="off">
+                    <label class="btn btn-outline-dark me-2 mb-2" for="size-{{ size }}">{{ size }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mb-3" style="max-width:150px;">
+                <label class="form-label fw-bold">Quantity</label>
+                <input type="number" name="quantity" class="form-control" value="1" min="1" max="{{ product.stock_quantity }}">
+            </div>
+
+            <button type="submit" class="btn btn-dark btn-lg">
+                <i class="bi bi-cart-plus"></i> Add to Cart
+            </button>
+        </form>
+        {% else %}
+        <form action="{{ url_for('cart.view_cart') }}" method="POST" class="mt-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <div class="mb-3" style="max-width:150px;">
+                <label class="form-label fw-bold">Quantity</label>
+                <input type="number" name="quantity" class="form-control" value="1" min="1" max="{{ product.stock_quantity }}">
+            </div>
+            <button type="submit" class="btn btn-dark btn-lg" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+                <i class="bi bi-cart-plus"></i>
+                {{ 'Out of Stock' if product.stock_quantity == 0 else 'Add to Cart' }}
+            </button>
+        </form>
+        {% endif %}
+
+        <p class="text-muted mt-3 small">
+            {% if product.stock_quantity > 0 %}
+                <i class="bi bi-check-circle text-success"></i> In stock ({{ product.stock_quantity }} available)
+            {% else %}
+                <i class="bi bi-x-circle text-danger"></i> Out of stock
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endblock %}
