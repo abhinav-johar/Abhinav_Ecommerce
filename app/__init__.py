@@ -1,15 +1,18 @@
 import os
 from flask import Flask, render_template
 
-from app.config import config
+from app.config import Config
 from app.extensions import db, migrate, login_manager, bcrypt, csrf
 
 
 def create_app():
-    base_dir=os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
-    template_dir=os.path.join(base_dir,"templates")
-    app = Flask(__name__ , template_folder=template_dir)
-    app.config.from_object(config)
+    # templates/ lives at the project root (one level above app/),
+    # not inside app/, per the project's file structure.
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    template_dir = os.path.join(base_dir, 'templates')
+
+    app = Flask(__name__, template_folder=template_dir)
+    app.config.from_object(Config)
 
     # ------------------------------------------------------
     # Initialize extensions
@@ -64,5 +67,26 @@ def create_app():
     def internal_error(error):
         db.session.rollback()
         return render_template('errors/500.html'), 500
+
+    # ------------------------------------------------------
+    # Context processor: makes category + sample-product data
+    # available on every page, for the navbar mega menu
+    # ------------------------------------------------------
+    @app.context_processor
+    def inject_nav_categories():
+        from app.models import Category, Product
+
+        categories = Category.query.all()
+        nav_data = []
+        for cat in categories:
+            sample_products = (
+                Product.query.filter_by(category_id=cat.id, is_active=True)
+                .order_by(Product.created_at.desc())
+                .limit(3)
+                .all()
+            )
+            nav_data.append({'category': cat, 'products': sample_products})
+
+        return dict(nav_categories=nav_data)
 
     return app

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+        {% block breadcrumb_extra %}{% endblock %}
+    </ol>
+</nav>
+
+{% block product_body %}{% endblock %}
+{% endblock %}

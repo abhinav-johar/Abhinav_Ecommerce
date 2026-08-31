@@ -1,0 +1,191 @@
+/* Custom styles for One8 E-commerce - build on top of Bootstrap */
+
+.product-card {
+    position: relative;
+    border: none;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.product-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+.product-card .card-img-top {
+    transition: opacity 0.2s ease;
+}
+
+.product-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.product-badge.selling-fast { background-color: #2e7d32; }
+.product-badge.trending { background-color: #2e7d32; }
+
+.product-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    display: inline-block;
+}
+
+.wishlist-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    cursor: pointer;
+}
+
+.wishlist-btn i {
+    font-size: 1rem;
+    color: #333;
+}
+
+.wishlist-btn.active i {
+    color: #e63946;
+}
+
+.wishlist-btn.active i::before {
+    content: "\f415"; /* bi-heart-fill */
+}
+
+.quick-add-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #17a398;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.quick-add-btn i {
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.horizontal-scroll-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 0.5rem;
+}
+
+.horizontal-scroll-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.horizontal-scroll-row::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 999px;
+}
+
+.horizontal-scroll-item {
+    flex: 0 0 auto;
+    width: 230px;
+    scroll-snap-align: start;
+}
+
+.newsletter-footer input[type="email"] {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #555;
+    color: #fff;
+    font-size: 1.25rem;
+    padding: 0.5rem 0;
+}
+
+.newsletter-footer input[type="email"]:focus {
+    outline: none;
+    border-bottom-color: #17a398;
+    background: transparent;
+    box-shadow: none;
+}
+
+.newsletter-footer input[type="email"]::placeholder {
+    color: #888;
+}
+
+.footer-link-list a {
+    color: #bbb;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 0.6rem;
+    font-size: 0.9rem;
+}
+
+.footer-link-list a:hover {
+    color: #fff;
+}
+
+.social-icon-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+.social-icon-circle i {
+    color: #111;
+}
+
+/* ================= MEGA MENU ================= */
+.mega-menu-trigger {
+    position: static;
+}
+
+/* .mega-menu-panel is positioned relative to nav (position-relative in base.html),
+   so it spans the FULL navbar width, not just the trigger link's width. */
+.mega-menu-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: #fff;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+    border-top: 1px solid #eee;
+    z-index: 1050;
+    padding: 2rem;
+}
+
+/* Only enable hover mega menu on larger screens (desktop nav, not the mobile collapse) */
+@media (min-width: 992px) {
+    .mega-menu-trigger:hover .mega-menu-panel {
+        display: block;
+    }
+}

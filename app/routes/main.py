@@ -10,7 +10,7 @@ def index():
     featured_products = (
         Product.query.filter_by(is_active=True)
         .order_by(Product.created_at.desc())
-        .limit(5)
+        .limit(8)
         .all()
     )
     categories = Category.query.all()
@@ -43,4 +43,12 @@ def product_detail(product_id):
     product = Product.query.get_or_404(product_id)
     if not product.is_active:
         abort(404)
-    return render_template('product_detail.html', product=product)
+
+    related_products = (
+        Product.query.filter_by(category_id=product.category_id, is_active=True)
+        .filter(Product.id != product.id)
+        .limit(4)
+        .all()
+    )
+
+    return render_template('product_detail.html', product=product, related_products=related_products)

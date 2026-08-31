@@ -4,7 +4,7 @@
 
 {% block content %}
     <!-- Banner -->
-    <div class="mb-4 rounded-3 text-center text-white position-relative overflow-hidden"
+    <div class="mb-5 rounded-3 text-center text-white position-relative overflow-hidden"
          style="background-image: url('{{ url_for('static', filename='images/banners/banner.webp') }}');
                 background-size: cover; background-position: center; min-height: 350px;">
         <div class="position-absolute top-0 start-0 w-100 h-100" style="background-color: rgba(0,0,0,0.4);"></div>
@@ -15,37 +15,51 @@
         </div>
     </div>
 
-    <!-- Categories -->
-    <h4 class="mb-3">Shop by Category</h4>
-    <div class="row mb-5">
-        {% for category in categories %}
-        <div class="col-6 col-md-3 mb-3">
-            <a href="{{ url_for('main.product_list', category=category.slug) }}" class="text-decoration-none">
-                <div class="card text-center h-100 shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title text-dark mb-0">{{ category.name }}</h6>
-                    </div>
-                </div>
-            </a>
-        </div>
-        {% endfor %}
+    <!-- Featured Products (horizontal scroll) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Featured Products</h4>
+        <a href="{{ url_for('main.product_list') }}" class="text-decoration-none small">View All &rarr;</a>
     </div>
 
-    <!-- Featured Products -->
-    <h4 class="mb-3">Featured Products</h4>
-    <div class="row">
+    <div class="horizontal-scroll-row mb-5">
         {% for product in products %}
-        <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100 shadow-sm">
+        <div class="horizontal-scroll-item">
+            <div class="card product-card h-100">
+
+                {% if product.stock_quantity <= 20 %}
+                <span class="product-badge selling-fast"><span class="dot"></span> SELLING FAST</span>
+                {% endif %}
+
+                <button type="button" class="wishlist-btn" onclick="this.classList.toggle('active')" title="Add to wishlist">
+                    <i class="bi bi-heart"></i>
+                </button>
+
                 <a href="{{ url_for('main.product_detail', product_id=product.id) }}">
                     <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}"
-                         class="card-img-top" alt="{{ product.name }}" style="height:200px; object-fit:cover;">
+                         class="card-img-top" alt="{{ product.name }}" style="height:260px; object-fit:cover;">
                 </a>
+
+                {% if not product.variants %}
+                <form class="ajax-add-to-cart" action="{{ url_for('cart.view_cart') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="quick-add-btn" title="Quick add to bag">
+                        <i class="bi bi-bag-plus"></i>
+                    </button>
+                </form>
+                {% else %}
+                <a href="{{ url_for('main.product_detail', product_id=product.id) }}" class="quick-add-btn" title="Select options">
+                    <i class="bi bi-bag-plus"></i>
+                </a>
+                {% endif %}
+
                 <div class="card-body">
-                    <h6 class="card-title text-truncate">{{ product.name }}</h6>
+                    <p class="text-uppercase text-muted small mb-1">{{ product.category.name }}</p>
+                    <h6 class="card-title text-truncate mb-1">{{ product.name }}</h6>
                     <p class="mb-0">
                         {% if product.discount_price %}
-                            <span class="text-decoration-line-through text-muted">₹{{ '%.0f' % product.price }}</span>
+                            <span class="text-decoration-line-through text-muted small">₹{{ '%.0f' % product.price }}</span>
                             <span class="fw-bold text-success">₹{{ '%.0f' % product.discount_price }}</span>
                         {% else %}
                             <span class="fw-bold">₹{{ '%.0f' % product.price }}</span>
@@ -56,6 +70,22 @@
         </div>
         {% else %}
         <p class="text-muted">No products yet. Run <code>python seed.py</code> to add sample data.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Categories -->
+    <h4 class="mb-3">Shop by Category</h4>
+    <div class="row mb-3">
+        {% for category in categories %}
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('main.product_list', category=category.slug) }}" class="text-decoration-none">
+                <div class="card text-center h-100 shadow-sm">
+                    <div class="card-body py-4">
+                        <h6 class="card-title text-dark mb-0">{{ category.name }}</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
         {% endfor %}
     </div>
 {% endblock %}

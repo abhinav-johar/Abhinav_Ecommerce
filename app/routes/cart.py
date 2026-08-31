@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from flask_login import current_user
 
 from app.extensions import db
@@ -29,6 +29,45 @@ def get_or_create_cart(user):
     return cart
 
 
+def is_ajax_request():
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+def serialize_cart(cart):
+    """Build a JSON-friendly snapshot of the cart, used by the drawer."""
+    items = CartItem.query.filter_by(cart_id=cart.id).all()
+    subtotal = sum(item.price_at_time * item.quantity for item in items)
+    count = sum(item.quantity for item in items)
+
+    items_data = []
+    for item in items:
+        items_data.append({
+            'id': item.id,
+            'product_name': item.product.name,
+            'product_image': url_for('static', filename='images/' + item.product.image_url) if item.product.image_url else None,
+            'color': item.variant.color if item.variant else None,
+            'size': item.variant.size if item.variant else None,
+            'quantity': item.quantity,
+            'price': item.price_at_time,
+            'line_total': item.price_at_time * item.quantity,
+        })
+
+    return {
+        'items': items_data,
+        'subtotal': subtotal,
+        'count': count,
+        'checkout_url': url_for('checkout.checkout'),
+    }
+
+
+@cart_bp.route('/data', methods=['GET'])
+def cart_data():
+    """JSON snapshot of the current cart, used to populate the drawer."""
+    user = get_current_user()
+    cart = get_or_create_cart(user)
+    return jsonify(serialize_cart(cart))
+
+
 @cart_bp.route('/', methods=['GET', 'POST'])
 def view_cart():
     user = get_current_user()
@@ -42,6 +81,8 @@ def view_cart():
         quantity = request.form.get('quantity', default=1, type=int)
 
         if not product_id:
+            if is_ajax_request():
+                return jsonify(success=False, message='Something went wrong. Please try again.'), 400
             flash('Something went wrong. Please try again.', 'error')
             return redirect(url_for('cart.view_cart'))
 
@@ -64,6 +105,8 @@ def view_cart():
                 available_stock = variant.stock_quantity
 
         if available_stock < quantity:
+            if is_ajax_request():
+                return jsonify(success=False, message=f'Only {available_stock} left in stock.'), 400
             flash(f'Only {available_stock} left in stock.', 'error')
             return redirect(url_for('main.product_detail', product_id=product.id))
 
@@ -86,10 +129,17 @@ def view_cart():
             db.session.add(new_item)
 
         db.session.commit()
+
+        if is_ajax_request():
+            cart_snapshot = serialize_cart(cart)
+            cart_snapshot['success'] = True
+            cart_snapshot['message'] = f'{product.name} added to your bag.'
+            return jsonify(cart_snapshot)
+
         flash(f'{product.name} added to cart.', 'success')
         return redirect(url_for('cart.view_cart'))
 
-    # GET request -> show cart contents
+    # GET request -> show full cart page (fallback for no-JS / direct visits)
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
     subtotal = sum(item.price_at_time * item.quantity for item in cart_items)
 
@@ -102,10 +152,26 @@ def update_cart(item_id):
     quantity = request.form.get('quantity', type=int)
 
     if quantity and quantity > 0:
+        # Stock check
+        available = item.variant.stock_quantity if item.variant else item.product.stock_quantity
+        if quantity > available:
+            if is_ajax_request():
+                return jsonify(success=False, message=f'Only {available} left in stock.'), 400
+            flash(f'Only {available} left in stock.', 'error')
+            return redirect(url_for('cart.view_cart'))
+
         item.quantity = quantity
         db.session.commit()
+
+        if is_ajax_request():
+            cart_snapshot = serialize_cart(item.cart)
+            cart_snapshot['success'] = True
+            return jsonify(cart_snapshot)
+
         flash('Cart updated.', 'success')
     else:
+        if is_ajax_request():
+            return jsonify(success=False, message='Invalid quantity.'), 400
         flash('Invalid quantity.', 'error')
 
     return redirect(url_for('cart.view_cart'))
@@ -114,7 +180,14 @@ def update_cart(item_id):
 @cart_bp.route('/remove/<int:item_id>', methods=['POST'])
 def remove_from_cart(item_id):
     item = CartItem.query.get_or_404(item_id)
+    cart = item.cart
     db.session.delete(item)
     db.session.commit()
+
+    if is_ajax_request():
+        cart_snapshot = serialize_cart(cart)
+        cart_snapshot['success'] = True
+        return jsonify(cart_snapshot)
+
     flash('Item removed from cart.', 'success')
     return redirect(url_for('cart.view_cart'))
