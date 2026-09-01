@@ -6,3 +6,4 @@ Flask-WTF
 python-dotenv
 pymysql
 Flask-Bcrypt
+gunicorn
