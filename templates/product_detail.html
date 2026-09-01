@@ -3,88 +3,80 @@
 {% block title %}{{ product.name }}{% endblock %}
 
 {% block breadcrumb_extra %}
-<li class="breadcrumb-item"><a href="{{ url_for('main.product_list', category=product.category.slug) }}">{{ product.category.name }}</a></li>
-<li class="breadcrumb-item active">{{ product.name }}</li>
+<a href="{{ url_for('main.product_list', category=product.category.slug) }}">{{ product.category.name }}</a>
+<span class="sep">/</span>
+<span class="current">{{ product.name }}</span>
 {% endblock %}
 
 {% block product_body %}
-<div class="row">
-    <!-- Image Gallery -->
-    <div class="col-md-7 mb-4">
-        <div class="row g-2">
-            <div class="col-6">
-                <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x600?text=No+Image' }}"
-                     class="img-fluid rounded" alt="{{ product.name }}">
-            </div>
-            <div class="col-6">
-                <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x600?text=No+Image' }}"
-                     class="img-fluid rounded" alt="{{ product.name }}">
-            </div>
-        </div>
+<div class="product-detail-layout">
+    <div class="product-gallery">
+        <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x600?text=No+Image' }}" alt="{{ product.name }}">
+        <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x600?text=No+Image' }}" alt="{{ product.name }}">
     </div>
 
-    <!-- Product Info -->
-    <div class="col-md-5">
-        <p class="text-uppercase text-muted small fw-bold mb-1">{{ product.category.name }}</p>
-        <h2 class="fw-bold mb-2">{{ product.name }}</h2>
-        <p class="text-muted mb-3">{{ product.description }}</p>
+    <div class="product-info-panel">
+        <p class="category-label">{{ product.category.name }}</p>
+        <h1>{{ product.name }}</h1>
+        <p class="description">{{ product.description }}</p>
 
-        <p class="fs-4 fw-bold mb-1">
+        <p class="product-price-lg">
             {% if product.discount_price %}
-                <span class="text-decoration-line-through text-muted fs-6 me-2">₹{{ '%.2f' % product.price }}</span>
-                <span class="text-success">₹{{ '%.2f' % product.discount_price }}</span>
+                <span class="original">₹{{ '%.2f' % product.price }}</span>
+                <span class="current on-sale">₹{{ '%.2f' % product.discount_price }}</span>
             {% else %}
-                ₹{{ '%.2f' % product.price }}
+                <span class="current">₹{{ '%.2f' % product.price }}</span>
             {% endif %}
         </p>
-        <p class="text-muted small mb-4">Inclusive of all taxes</p>
+        <p class="tax-note">Inclusive of all taxes</p>
 
         {% if product.variants %}
         <form id="addToCartForm" class="ajax-add-to-cart" action="{{ url_for('cart.view_cart') }}" method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="product_id" value="{{ product.id }}">
+            <input type="hidden" name="size" id="selectedSizeInput" value="">
 
-            <!-- Color swatches -->
             {% set colors = product.variants|map(attribute='color')|unique|list %}
             {% if colors and colors[0] %}
-            <p class="fw-bold mb-2">Color: <span class="fw-normal" id="selectedColor">{{ colors[0] }}</span></p>
-            <div class="d-flex gap-2 mb-4">
-                {% for color in colors %}
-                <label class="color-swatch" title="{{ color }}"
-                       style="width:32px; height:32px; border-radius:50%; border:2px solid #dee2e6; cursor:pointer; display:inline-block; background-color:{{ color|lower }};">
-                    <input type="radio" name="color" value="{{ color }}" class="d-none" {{ 'checked' if loop.first else '' }}
-                           onclick="document.getElementById('selectedColor').innerText='{{ color }}';">
-                </label>
-                {% endfor %}
+            <div class="option-row">
+                <p class="option-label">Color: <span id="selectedColorLabel">{{ colors[0] }}</span></p>
+                <div class="color-swatches">
+                    {% for color in colors %}
+                    <span class="color-swatch {{ 'selected' if loop.first else '' }}"
+                          style="background-color:{{ color|lower }};"
+                          data-color="{{ color }}"
+                          title="{{ color }}"
+                          onclick="selectColor(this)"></span>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
-            <!-- Size selector -->
             {% set sizes = product.variants|map(attribute='size')|unique|list %}
             {% if sizes and sizes[0] %}
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <p class="fw-bold mb-0">Size:</p>
-                <a href="#" class="small text-decoration-none">Our size guides</a>
-            </div>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                {% for size in sizes %}
-                <input type="radio" class="btn-check" name="size" id="size-{{ size }}" value="{{ size }}"
-                       autocomplete="off" {{ 'checked' if loop.first else '' }}>
-                <label class="btn btn-outline-dark" for="size-{{ size }}" style="min-width:48px;">{{ size }}</label>
-                {% endfor %}
+            <div class="option-row">
+                <p class="option-label">
+                    Size:
+                    <a href="#" class="size-guide-link">Our size guides</a>
+                </p>
+                <div class="size-options">
+                    {% for size in sizes %}
+                    <button type="button" class="size-btn {{ 'selected' if loop.first else '' }}"
+                            data-size="{{ size }}" onclick="selectSize(this)">{{ size }}</button>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
-            <div class="mb-4">
+            <div class="stock-status {{ 'in-stock' if product.stock_quantity > 0 else 'out-of-stock' }}">
                 {% if product.stock_quantity > 0 %}
-                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> In stock</span>
+                    <i class="bi bi-check-circle-fill"></i> In stock
                 {% else %}
-                    <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Out of stock</span>
+                    <i class="bi bi-x-circle-fill"></i> Out of stock
                 {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-lg w-100 fw-bold" style="background-color:#2ee6d6;"
-                    {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
                 Add to Bag
             </button>
         </form>
@@ -95,16 +87,15 @@
             <input type="hidden" name="product_id" value="{{ product.id }}">
             <input type="hidden" name="quantity" value="1">
 
-            <div class="mb-4">
+            <div class="stock-status {{ 'in-stock' if product.stock_quantity > 0 else 'out-of-stock' }}">
                 {% if product.stock_quantity > 0 %}
-                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> In stock</span>
+                    <i class="bi bi-check-circle-fill"></i> In stock
                 {% else %}
-                    <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Out of stock</span>
+                    <i class="bi bi-x-circle-fill"></i> Out of stock
                 {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-lg w-100 fw-bold" style="background-color:#2ee6d6;"
-                    {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
                 Add to Bag
             </button>
         </form>
@@ -112,106 +103,106 @@
     </div>
 </div>
 
-<!-- Accordion: Description / Fabric & Care / Technical Spec / Warranty / Shipping -->
-<div class="row mt-5">
-    <div class="col-md-7">
-        <div class="accordion" id="productAccordion">
+<div class="accordion" style="max-width: 700px;">
+    <div class="accordion-item">
+        <button type="button" class="accordion-trigger open" onclick="toggleAccordion(this)">
+            Description <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="accordion-panel open">
+            {{ product.description or 'No description available for this product.' }}
+        </div>
+    </div>
 
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#desc">
-                        Description
-                    </button>
-                </h2>
-                <div id="desc" class="accordion-collapse collapse show" data-bs-parent="#productAccordion">
-                    <div class="accordion-body">
-                        {{ product.description or 'No description available for this product.' }}
-                    </div>
-                </div>
-            </div>
+    <div class="accordion-item">
+        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
+            Fabric &amp; Care <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="accordion-panel">
+            Machine wash cold. Do not bleach. Tumble dry low. Iron on low heat if needed.
+        </div>
+    </div>
 
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fabric">
-                        Fabric &amp; Care
-                    </button>
-                </h2>
-                <div id="fabric" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
-                    <div class="accordion-body">
-                        Machine wash cold. Do not bleach. Tumble dry low. Iron on low heat if needed.
-                    </div>
-                </div>
-            </div>
+    <div class="accordion-item">
+        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
+            Technical Specification <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="accordion-panel">
+            <ul>
+                <li>Category: {{ product.category.name }}</li>
+                <li>Stock available: {{ product.stock_quantity }} units</li>
+            </ul>
+        </div>
+    </div>
 
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#specs">
-                        Technical Specification
-                    </button>
-                </h2>
-                <div id="specs" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
-                    <div class="accordion-body">
-                        <ul class="mb-0">
-                            <li>Category: {{ product.category.name }}</li>
-                            <li>Stock available: {{ product.stock_quantity }} units</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+    <div class="accordion-item">
+        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
+            Warranty <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="accordion-panel">
+            This product comes with a standard 6-month manufacturing defect warranty.
+        </div>
+    </div>
 
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#warranty">
-                        Warranty
-                    </button>
-                </h2>
-                <div id="warranty" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
-                    <div class="accordion-body">
-                        This product comes with a standard 6-month manufacturing defect warranty.
-                    </div>
-                </div>
-            </div>
-
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#shipping">
-                        Shipping &amp; Returns
-                    </button>
-                </h2>
-                <div id="shipping" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
-                    <div class="accordion-body">
-                        Free shipping, dispatched within 48-72 hours. 15-day easy returns.
-                    </div>
-                </div>
-            </div>
-
+    <div class="accordion-item">
+        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
+            Shipping &amp; Returns <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="accordion-panel">
+            Free shipping, dispatched within 48-72 hours. 15-day easy returns.
         </div>
     </div>
 </div>
 
-<!-- You May Also Like -->
 {% if related_products %}
-<div class="mt-5">
-    <h4 class="fw-bold mb-3">You May Also Like</h4>
-    <div class="row">
+<div style="margin-top: var(--space-6);">
+    <h2 style="font-size: var(--text-lg); margin-bottom: var(--space-3);">You May Also Like</h2>
+    <div class="product-grid">
         {% for rp in related_products %}
-        <div class="col-6 col-md-3 mb-4">
-            <div class="card h-100 shadow-sm">
-                <a href="{{ url_for('main.product_detail', product_id=rp.id) }}">
-                    <img src="{{ url_for('static', filename='images/' ~ rp.image_url) if rp.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}"
-                         class="card-img-top" alt="{{ rp.name }}" style="height:200px; object-fit:cover;">
-                </a>
-                <div class="card-body">
-                    <p class="text-uppercase text-muted small mb-1">{{ rp.category.name }}</p>
-                    <h6 class="card-title text-truncate">{{ rp.name }}</h6>
-                    <p class="mb-0 fw-bold">
-                        ₹{{ '%.0f' % (rp.discount_price if rp.discount_price else rp.price) }}
-                    </p>
-                </div>
+        <div class="product-card">
+            <a class="card-media" href="{{ url_for('main.product_detail', product_id=rp.id) }}">
+                <img src="{{ url_for('static', filename='images/' ~ rp.image_url) if rp.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}" alt="{{ rp.name }}">
+            </a>
+            <div class="card-body">
+                <p class="product-eyebrow">{{ rp.category.name }}</p>
+                <p class="product-name">{{ rp.name }}</p>
+                <p class="product-price">
+                    <span class="current">₹{{ '%.0f' % (rp.discount_price if rp.discount_price else rp.price) }}</span>
+                </p>
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectColor(el) {
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('selectedColorLabel').textContent = el.dataset.color;
+    }
+
+    function selectSize(el) {
+        document.querySelectorAll('.size-btn').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        const sizeInput = document.getElementById('selectedSizeInput');
+        if (sizeInput) sizeInput.value = el.dataset.size;
+    }
+
+    // Initialize hidden size input with the first (default-selected) size
+    document.addEventListener('DOMContentLoaded', function () {
+        const firstSize = document.querySelector('.size-btn.selected');
+        const sizeInput = document.getElementById('selectedSizeInput');
+        if (firstSize && sizeInput) sizeInput.value = firstSize.dataset.size;
+    });
+
+    function toggleAccordion(trigger) {
+        const panel = trigger.nextElementSibling;
+        const isOpen = panel.classList.contains('open');
+        panel.classList.toggle('open', !isOpen);
+        trigger.classList.toggle('open', !isOpen);
+    }
+</script>
 {% endblock %}

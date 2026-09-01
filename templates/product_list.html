@@ -3,57 +3,55 @@
 {% block title %}Products{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- Sidebar filter -->
-    <div class="col-md-3 mb-4">
-        <h6 class="fw-bold">Categories</h6>
-        <div class="list-group">
-            <a href="{{ url_for('main.product_list') }}"
-               class="list-group-item list-group-item-action {{ 'active' if not active_category else '' }}">
-                All
-            </a>
-            {% for category in categories %}
-            <a href="{{ url_for('main.product_list', category=category.slug) }}"
-               class="list-group-item list-group-item-action {{ 'active' if active_category == category.slug else '' }}">
-                {{ category.name }}
-            </a>
-            {% endfor %}
-        </div>
-    </div>
+<div class="breadcrumb">
+    <a href="{{ url_for('main.index') }}">Home</a>
+    <span class="sep">/</span>
+    <span class="current">Products</span>
+</div>
 
-    <!-- Product grid -->
-    <div class="col-md-9">
-        <h4 class="mb-3">
+<div class="product-list-layout">
+    <aside class="filter-sidebar">
+        <h3>Categories</h3>
+        <a href="{{ url_for('main.product_list') }}" class="{{ 'active' if not active_category else '' }}">All</a>
+        {% for category in categories %}
+        <a href="{{ url_for('main.product_list', category=category.slug) }}"
+           class="{{ 'active' if active_category == category.slug else '' }}">
+            {{ category.name }}
+        </a>
+        {% endfor %}
+    </aside>
+
+    <div>
+        <h1 style="font-size: var(--text-lg); margin-bottom: var(--space-4);">
             {% if active_category %}
                 {{ categories|selectattr('slug', 'equalto', active_category)|map(attribute='name')|first }}
             {% else %}
                 All Products
             {% endif %}
-        </h4>
+        </h1>
 
-        <div class="row">
+        <div class="product-list-grid">
             {% for product in products %}
-            <div class="col-6 col-md-4 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <a href="{{ url_for('main.product_detail', product_id=product.id) }}">
-                        <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}"
-                             class="card-img-top" alt="{{ product.name }}" style="height:220px; object-fit:cover;">
-                    </a>
-                    <div class="card-body">
-                        <h6 class="card-title text-truncate">{{ product.name }}</h6>
-                        <p class="mb-0">
-                            {% if product.discount_price %}
-                                <span class="text-decoration-line-through text-muted">₹{{ '%.0f' % product.price }}</span>
-                                <span class="fw-bold text-success">₹{{ '%.0f' % product.discount_price }}</span>
-                            {% else %}
-                                <span class="fw-bold">₹{{ '%.0f' % product.price }}</span>
-                            {% endif %}
-                        </p>
-                    </div>
+            <div class="product-card">
+                <a class="card-media" href="{{ url_for('main.product_detail', product_id=product.id) }}">
+                    <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}"
+                         alt="{{ product.name }}">
+                </a>
+                <div class="card-body">
+                    <p class="product-eyebrow">{{ product.category.name }}</p>
+                    <p class="product-name">{{ product.name }}</p>
+                    <p class="product-price">
+                        {% if product.discount_price %}
+                            <span class="original">₹{{ '%.0f' % product.price }}</span>
+                            <span class="current on-sale">₹{{ '%.0f' % product.discount_price }}</span>
+                        {% else %}
+                            <span class="current">₹{{ '%.0f' % product.price }}</span>
+                        {% endif %}
+                    </p>
                 </div>
             </div>
             {% else %}
-            <p class="text-muted">No products found in this category.</p>
+            <p class="empty-state">No products found in this category.</p>
             {% endfor %}
         </div>
     </div>
