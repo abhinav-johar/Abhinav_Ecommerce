@@ -737,43 +737,44 @@ img {
 
     .product-image-section img {
         cursor: pointer;
-    }}
-
-    .lightbox-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        z-index: 2000;
-        align-items: center;
-        justify-content: center;
     }
+}
 
-    .lightbox-overlay.open {
-        display: flex;
-    }
+.lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
 
-    .lightbox-overlay img {
-        max-width: 85vw;
-        max-height: 85vh;
-        object-fit: contain;
-        border-radius: 4px;
-        box-shadow: var(--shadow-float);
-    }
+.lightbox-overlay.open {
+    display: flex;
+}
 
-    .lightbox-close {
-        position: absolute;
-        top: 24px;
-        right: 32px;
-        background: none;
-        border: none;
-        color: #fff;
-        font-size: 2.5rem;
-        line-height: 1;
-        cursor: pointer;
-    }
+.lightbox-overlay img {
+    max-width: 85vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: var(--shadow-float);
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
 
 
 /* ==========================================================
@@ -830,8 +831,7 @@ img {
    ========================================================== */
 .hero {
     position: relative;
-    min-height: 380px;
-    border-radius: 4px;
+    min-height: 500px;
     overflow: hidden;
     background-size: cover;
     background-position: center;
@@ -841,6 +841,14 @@ img {
     text-align: center;
     color: #fff;
     margin-bottom: var(--space-6);
+
+    /* Break out of the centered .container to span the full viewport width */
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+
+    /* Pull up to sit flush against the navbar, cancelling main's top padding */
+    margin-top: calc(-1 * var(--space-4));
 }
 
 .hero::before {
@@ -865,6 +873,33 @@ img {
 .hero-content p {
     font-size: var(--text-md);
     margin-bottom: var(--space-4);
+}
+
+
+/* Homepage only: navbar floats transparent over the hero image */
+.has-hero .site-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: transparent;
+    border-bottom: none;
+    z-index: 950;
+}
+
+.has-hero .site-header .logo,
+.has-hero .site-header .nav-list>li>a,
+.has-hero .site-header .text-link,
+.has-hero .site-header .icon-link {
+    color: #fff;
+}
+
+.has-hero .hero {
+    min-height: 560px;
+}
+
+.has-hero .flash-container {
+    padding-top: 0;
 }
 
 /* ==========================================================

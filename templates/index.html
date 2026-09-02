@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
 
+{% block body_class %}has-hero{% endblock %}
+
 {% block title %}Home{% endblock %}
 
 {% block content %}
-    <div class="hero" style="background-image: url('{{ url_for('static', filename='images/banners/banner.webp') }}');">
+    <div class="hero" style="background-image: url('{{ url_for('static', filename='images/banners/banner1.jpg') }}');">
         <div class="hero-content">
             <h1>Welcome to One8</h1>
             <p>Quality fashion, delivered to your door.</p>

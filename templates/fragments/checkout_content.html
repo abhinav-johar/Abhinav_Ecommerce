@@ -1,0 +1,49 @@
+<div class="checkout-section">
+    <h3>Deliver To</h3>
+    <p style="font-weight:600; margin-bottom:4px;">{{ address.full_name }}</p>
+    <p class="muted" style="margin-bottom:4px;">{{ address.address_line1 }}{% if address.address_line2 %}, {{ address.address_line2 }}{% endif %}</p>
+    <p class="muted" style="margin-bottom:4px;">{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+    <p class="muted">Phone: {{ address.phone }}</p>
+</div>
+
+<div class="checkout-section">
+    <h3>Payment Method</h3>
+    <p style="font-weight:600;"><i class="bi bi-cash-stack"></i> Cash on Delivery (COD)</p>
+    <p class="muted" style="font-size:var(--text-xs); margin-top:4px;">Online payment options coming soon.</p>
+</div>
+
+<div class="checkout-section">
+    <h3>Items in this order</h3>
+    {% for item in cart_items %}
+    <div class="checkout-item-row">
+        <span>
+            {{ item.product.name }}
+            {% if item.variant %}
+                <span class="muted" style="font-size:var(--text-xs);">
+                    ({% if item.variant.size %}{{ item.variant.size }}{% endif %}{% if item.variant.color %}, {{ item.variant.color }}{% endif %})
+                </span>
+            {% endif %}
+            <span class="muted">x{{ item.quantity }}</span>
+        </span>
+        <span>₹{{ '%.0f' % (item.price_at_time * item.quantity) }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="checkout-summary-row">
+    <span>Subtotal</span>
+    <span>₹{{ '%.0f' % subtotal }}</span>
+</div>
+<div class="checkout-summary-row">
+    <span>Shipping</span>
+    <span style="color:var(--color-success);">Free</span>
+</div>
+<div class="checkout-total-row">
+    <span>Total</span>
+    <span>₹{{ '%.0f' % subtotal }}</span>
+</div>
+
+<form id="placeOrderForm" class="ajax-place-order" action="{{ url_for('checkout.place_order') }}" method="POST" style="margin-top: var(--space-4);">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary btn-block">Place Order (COD)</button>
+</form>
