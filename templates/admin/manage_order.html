@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Orders{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>Manage Orders</h1>
+</div>
+
+<div class="admin-subnav">
+    <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('admin.manage_products') }}">Products</a>
+    <a href="{{ url_for('admin.manage_orders') }}" class="active">Orders</a>
+</div>
+
+<div style="margin-bottom: var(--space-4);">
+    <a href="{{ url_for('admin.manage_orders') }}" style="margin-right: var(--space-3); {{ 'font-weight:700;' if not status_filter else '' }}">All</a>
+    {% for s in ['pending', 'shipped', 'delivered', 'cancelled'] %}
+    <a href="{{ url_for('admin.manage_orders', status=s) }}" style="margin-right: var(--space-3); {{ 'font-weight:700;' if status_filter == s else '' }}">{{ s|capitalize }}</a>
+    {% endfor %}
+</div>
+
+<table class="admin-table">
+    <thead>
+        <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Date</th>
+            <th>Update</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in orders %}
+        <tr>
+            <td>#{{ order.id }}</td>
+            <td>{{ order.user.name }}<br><span class="muted" style="font-size:var(--text-xs);">{{ order.user.email }}</span></td>
+            <td>₹{{ '%.0f' % order.total_amount }}</td>
+            <td><span class="status-badge {{ order.status }}">{{ order.status }}</span></td>
+            <td><span class="status-badge {{ order.payment_status }}">{{ order.payment_status }}</span></td>
+            <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
+            <td>
+                <form action="{{ url_for('admin.update_order_status', order_id=order.id) }}" method="POST" style="display:flex; gap:6px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="status" style="padding:4px; font-size:var(--text-xs);">
+                        {% for s in ['pending', 'shipped', 'delivered', 'cancelled'] %}
+                        <option value="{{ s }}" {{ 'selected' if order.status == s else '' }}>{{ s|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="payment_status" style="padding:4px; font-size:var(--text-xs);">
+                        {% for p in ['unpaid', 'paid', 'refunded'] %}
+                        <option value="{{ p }}" {{ 'selected' if order.payment_status == p else '' }}>{{ p|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" style="font-size:var(--text-xs); padding:4px 10px; border:1px solid var(--color-line); border-radius:4px; background:#fff;">Update</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted center">No orders found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

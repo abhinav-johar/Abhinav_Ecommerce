@@ -58,24 +58,43 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
+    fabric_care = db.Column(db.Text, nullable=True)
+    technical_specification = db.Column(db.Text, nullable=True)
+    warranty_info = db.Column(db.Text, nullable=True)
+    shipping_returns = db.Column(db.Text, nullable=True)
     price = db.Column(db.Float, nullable=False)
     discount_price = db.Column(db.Float, nullable=True)
     stock_quantity = db.Column(db.Integer, default=0)
     image_url = db.Column(db.String(250))
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)                             
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
     variants = db.relationship('ProductVariant', backref='product', lazy=True, cascade='all, delete-orphan')
     reviews = db.relationship('Review', backref='product', lazy=True, cascade='all, delete-orphan')
-    cart_items = db.relationship('CartItem', backref='product', lazy=True, cascade='all, delete-orphan')
-
+    cart_items = db.relationship('CartItem', backref='product', lazy=True)
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
-                                   
+    images = db.relationship('ProductImage', backref='product', lazy=True,
+                              order_by='ProductImage.sort_order', cascade='all, delete-orphan')
 
-    def __repr__(self):                              #so that we can call as product.name
+    def __repr__(self):
         return f'<Product {self.name}>'
+
+
+# ==========================================================
+# PRODUCT IMAGE (extra gallery photos, beyond Product.image_url)
+# ==========================================================
+class ProductImage(db.Model):
+    __tablename__ = 'product_image'
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    image_url = db.Column(db.String(250), nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+
+    def __repr__(self):
+        return f'<ProductImage product_id={self.product_id} url={self.image_url}>'
 
 
 # ==========================================================

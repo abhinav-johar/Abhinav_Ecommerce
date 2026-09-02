@@ -19,7 +19,7 @@
     <!-- ================= HEADER / NAV ================= -->
     <header class="site-header">
         <div class="container header-inner">
-            <a class="logo" href="{{ url_for('main.index') }}">AJ</a>
+            <a class="logo" href="{{ url_for('main.index') }}">One8</a>
 
             <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
                 <span></span><span></span><span></span>
@@ -69,6 +69,9 @@
 
             <div class="header-actions">
                 {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="text-link">Admin</a>
+                    {% endif %}
                     <a href="{{ url_for('orders.order_history') }}" class="icon-link" title="Orders"><i class="bi bi-box-seam"></i></a>
                     <a href="{{ url_for('auth.profile') }}" class="icon-link" title="{{ current_user.name }}"><i class="bi bi-person-circle"></i></a>
                     <a href="{{ url_for('auth.logout') }}" class="text-link">Logout</a>

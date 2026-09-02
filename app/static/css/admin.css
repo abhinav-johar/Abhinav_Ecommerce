@@ -1,0 +1,189 @@
+/* ==========================================================
+   ADMIN PANEL
+   ========================================================== */
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+.admin-header h1 {
+    font-size: var(--text-lg);
+}
+
+.admin-subnav {
+    display: flex;
+    gap: var(--space-4);
+    border-bottom: 1px solid var(--color-line);
+    margin-bottom: var(--space-5);
+}
+
+.admin-subnav a {
+    padding: var(--space-3) 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-muted);
+    border-bottom: 2px solid transparent;
+}
+
+.admin-subnav a.active,
+.admin-subnav a:hover {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-accent);
+}
+
+/* Stat cards */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+
+.stat-card {
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    padding: var(--space-4);
+}
+
+.stat-card .stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: var(--space-2);
+}
+
+.stat-card .stat-value {
+    font-size: var(--text-lg);
+    font-weight: 700;
+}
+
+.stat-card.warning .stat-value { color: var(--color-danger); }
+
+/* Tables */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+
+.admin-table th {
+    text-align: left;
+    padding: var(--space-3);
+    background: #fafafa;
+    border-bottom: 1px solid var(--color-line);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    color: var(--color-muted);
+}
+
+.admin-table td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-line);
+    vertical-align: middle;
+}
+
+.admin-table img.thumb-sm {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.table-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.table-actions button, .table-actions a {
+    font-size: var(--text-xs);
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--color-line);
+    background: #fff;
+}
+
+.table-actions .danger { color: var(--color-danger); border-color: var(--color-danger); }
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge.pending { background: #fff3cd; color: #856404; }
+.status-badge.shipped { background: #cce5ff; color: #004085; }
+.status-badge.delivered { background: var(--color-accent-light); color: #0d5d54; }
+.status-badge.cancelled { background: #fdeaea; color: var(--color-danger); }
+.status-badge.paid { background: var(--color-accent-light); color: #0d5d54; }
+.status-badge.unpaid { background: #f0f0f0; color: var(--color-muted); }
+.status-badge.refunded { background: #e5d4f5; color: #6a1b9a; }
+
+/* Forms */
+.admin-form {
+    max-width: 560px;
+}
+
+.form-group { margin-bottom: var(--space-4); }
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-2);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.65rem var(--space-3);
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    font-size: var(--text-sm);
+    font-family: inherit;
+}
+
+.form-group textarea { resize: vertical; min-height: 90px; }
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.current-image img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: var(--space-2);
+}
+
+@media (max-width: 768px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+}

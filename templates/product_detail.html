@@ -3,178 +3,429 @@
 {% block title %}{{ product.name }}{% endblock %}
 
 {% block breadcrumb_extra %}
-<a href="{{ url_for('main.product_list', category=product.category.slug) }}">{{ product.category.name }}</a>
+
+<a href="{{ url_for('main.product_list', category=product.category.slug) }}">
+    {{ product.category.name }}
+</a>
+
 <span class="sep">/</span>
+
 <span class="current">{{ product.name }}</span>
+
 {% endblock %}
 
 {% block product_body %}
+
+<!-- ================= PRODUCT DETAILS ================= -->
+
 <div class="product-detail-layout">
+
+
+    <!-- ================= IMAGE GALLERY ================= -->
+
     <div class="product-gallery">
-        <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x600?text=No+Image' }}" alt="{{ product.name }}">
-        <img src="{{ url_for('static', filename='images/' ~ product.image_url) if product.image_url else 'https://via.placeholder.com/500x600?text=No+Image' }}" alt="{{ product.name }}">
+
+        {% set gallery =
+        ([product.image_url] +
+        product.images|map(attribute='image_url')|list)
+        if product.image_url
+        else
+        product.images|map(attribute='image_url')|list
+        %}
+
+        <div class="product-image-grid">
+
+            {% for img_url in gallery[:4] %}
+
+            <div class="product-image-section">
+
+                <img src="{{ url_for('static', filename='images/' ~ img_url) }}" alt="{{ product.name }}"
+                    onclick="openLightbox(this.src)">
+            </div>
+
+            {% endfor %}
+
+            <!-- If fewer than 4 images exist, empty sections are added -->
+
+            {% for i in range(4 - gallery[:4]|length) %}
+
+            <div class="product-image-section">
+
+                <img src="{{ url_for('static', filename='images/' ~ img_url) }}" alt="{{ product.name }}"
+                    onclick="openLightbox(this.src)">
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+        <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox(event)">
+            <button type="button" class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
+            <img id="lightboxImage" src="" alt="Product image">
+        </div>
+
     </div>
+
+
+    <!-- ================= PRODUCT INFORMATION ================= -->
 
     <div class="product-info-panel">
-        <p class="category-label">{{ product.category.name }}</p>
-        <h1>{{ product.name }}</h1>
-        <p class="description">{{ product.description }}</p>
+
+        <p class="category-label">
+            {{ product.category.name }}
+        </p>
+
+        <h1>
+            {{ product.name }}
+        </h1>
+
+         
+
 
         <p class="product-price-lg">
+
             {% if product.discount_price %}
-                <span class="original">₹{{ '%.2f' % product.price }}</span>
-                <span class="current on-sale">₹{{ '%.2f' % product.discount_price }}</span>
+
+            <span class="original">
+                ₹{{ '%.2f' % product.price }}
+            </span>
+
+            <span class="current on-sale">
+                ₹{{ '%.2f' % product.discount_price }}
+            </span>
+
             {% else %}
-                <span class="current">₹{{ '%.2f' % product.price }}</span>
+
+            <span class="current">
+                ₹{{ '%.2f' % product.price }}
+            </span>
+
             {% endif %}
+
         </p>
-        <p class="tax-note">Inclusive of all taxes</p>
+
+
+        <p class="tax-note">
+            Inclusive of all taxes
+        </p>
+
 
         {% if product.variants %}
+
         <form id="addToCartForm" class="ajax-add-to-cart" action="{{ url_for('cart.view_cart') }}" method="POST">
+
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <input type="hidden" name="product_id" value="{{ product.id }}">
+
             <input type="hidden" name="size" id="selectedSizeInput" value="">
 
-            {% set colors = product.variants|map(attribute='color')|unique|list %}
+
+            {% set colors =
+            product.variants|map(attribute='color')|unique|list
+            %}
+
+
             {% if colors and colors[0] %}
+
             <div class="option-row">
-                <p class="option-label">Color: <span id="selectedColorLabel">{{ colors[0] }}</span></p>
+
+                <p class="option-label">
+                    Color:
+                    <span id="selectedColorLabel">
+                        {{ colors[0] }}
+                    </span>
+                </p>
+
                 <div class="color-swatches">
+
                     {% for color in colors %}
+
                     <span class="color-swatch {{ 'selected' if loop.first else '' }}"
-                          style="background-color:{{ color|lower }};"
-                          data-color="{{ color }}"
-                          title="{{ color }}"
-                          onclick="selectColor(this)"></span>
+                        style="background-color:{{ color|lower }};" data-color="{{ color }}" title="{{ color }}"
+                        onclick="selectColor(this)"></span>
+
                     {% endfor %}
+
                 </div>
+
             </div>
+
             {% endif %}
 
-            {% set sizes = product.variants|map(attribute='size')|unique|list %}
+
+            {% set sizes =
+            product.variants|map(attribute='size')|unique|list
+            %}
+
+
             {% if sizes and sizes[0] %}
+
             <div class="option-row">
+
                 <p class="option-label">
+
                     Size:
-                    <a href="#" class="size-guide-link">Our size guides</a>
+
+                    <a href="#" class="size-guide-link">
+                        Our size guides
+                    </a>
+
                 </p>
+
+
                 <div class="size-options">
+
                     {% for size in sizes %}
-                    <button type="button" class="size-btn {{ 'selected' if loop.first else '' }}"
-                            data-size="{{ size }}" onclick="selectSize(this)">{{ size }}</button>
+
+                    <button type="button" class="size-btn {{ 'selected' if loop.first else '' }}" data-size="{{ size }}"
+                        onclick="selectSize(this)">
+                        {{ size }}
+                    </button>
+
                     {% endfor %}
+
                 </div>
+
             </div>
+
             {% endif %}
+
 
             <div class="stock-status {{ 'in-stock' if product.stock_quantity > 0 else 'out-of-stock' }}">
+
                 {% if product.stock_quantity > 0 %}
-                    <i class="bi bi-check-circle-fill"></i> In stock
+
+                <i class="bi bi-check-circle-fill"></i>
+                In stock
+
                 {% else %}
-                    <i class="bi bi-x-circle-fill"></i> Out of stock
+
+                <i class="bi bi-x-circle-fill"></i>
+                Out of stock
+
                 {% endif %}
+
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+
+            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity==0 else ''
+                }}>
                 Add to Bag
             </button>
+
         </form>
+
 
         {% else %}
+
         <form class="ajax-add-to-cart" action="{{ url_for('cart.view_cart') }}" method="POST">
+
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <input type="hidden" name="product_id" value="{{ product.id }}">
+
             <input type="hidden" name="quantity" value="1">
 
+
             <div class="stock-status {{ 'in-stock' if product.stock_quantity > 0 else 'out-of-stock' }}">
+
                 {% if product.stock_quantity > 0 %}
-                    <i class="bi bi-check-circle-fill"></i> In stock
+
+                <i class="bi bi-check-circle-fill"></i>
+                In stock
+
                 {% else %}
-                    <i class="bi bi-x-circle-fill"></i> Out of stock
+
+                <i class="bi bi-x-circle-fill"></i>
+                Out of stock
+
                 {% endif %}
+
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+
+            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity==0 else ''
+                }}>
                 Add to Bag
             </button>
+
         </form>
+
         {% endif %}
+
     </div>
+
+
 </div>
 
-<div class="accordion" style="max-width: 700px;">
-    <div class="accordion-item">
-        <button type="button" class="accordion-trigger open" onclick="toggleAccordion(this)">
-            Description <i class="bi bi-chevron-down"></i>
+<!-- ================= PRODUCT TABS ================= -->
+
+<div class="tabs">
+
+
+    <div class="tab-list">
+
+        <button type="button" class="tab-btn active" onclick="selectTab(this, 'tab-description')">
+            Description
         </button>
-        <div class="accordion-panel open">
-            {{ product.description or 'No description available for this product.' }}
-        </div>
+
+        <button type="button" class="tab-btn" onclick="selectTab(this, 'tab-fabric')">
+            Fabric &amp; Care
+        </button>
+
+        <button type="button" class="tab-btn" onclick="selectTab(this, 'tab-specs')">
+            Technical Specification
+        </button>
+
+        <button type="button" class="tab-btn" onclick="selectTab(this, 'tab-warranty')">
+            Warranty
+        </button>
+
+        <button type="button" class="tab-btn" onclick="selectTab(this, 'tab-shipping')">
+            Shipping &amp; Returns
+        </button>
+
     </div>
 
-    <div class="accordion-item">
-        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
-            Fabric &amp; Care <i class="bi bi-chevron-down"></i>
-        </button>
-        <div class="accordion-panel">
-            Machine wash cold. Do not bleach. Tumble dry low. Iron on low heat if needed.
-        </div>
-    </div>
 
-    <div class="accordion-item">
-        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
-            Technical Specification <i class="bi bi-chevron-down"></i>
-        </button>
-        <div class="accordion-panel">
+    <div class="tab-panels">
+
+        <div class="tab-panel active" id="tab-description">
+
+            {{ product.description or
+            'No description available for this product.' }}
+
+        </div>
+
+
+        <div class="tab-panel" id="tab-fabric">
+
+            {{ product.fabric_care or
+            'Care instructions not specified for this product.' }}
+
+        </div>
+
+
+        <div class="tab-panel" id="tab-specs">
+
+            {% if product.technical_specification %}
+
+            {{ product.technical_specification }}
+
+            {% else %}
+
             <ul>
-                <li>Category: {{ product.category.name }}</li>
-                <li>Stock available: {{ product.stock_quantity }} units</li>
+
+                <li>
+                    Category: {{ product.category.name }}
+                </li>
+
+                <li>
+                    Stock available:
+                    {{ product.stock_quantity }} units
+                </li>
+
             </ul>
+
+            {% endif %}
+
         </div>
+
+
+        <div class="tab-panel" id="tab-warranty">
+
+            {{ product.warranty_info or
+            'No warranty information provided for this product.' }}
+
+        </div>
+
+
+        <div class="tab-panel" id="tab-shipping">
+
+            {{ product.shipping_returns or
+            'Shipping and returns information not specified.' }}
+
+        </div>
+
     </div>
 
-    <div class="accordion-item">
-        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
-            Warranty <i class="bi bi-chevron-down"></i>
-        </button>
-        <div class="accordion-panel">
-            This product comes with a standard 6-month manufacturing defect warranty.
-        </div>
-    </div>
 
-    <div class="accordion-item">
-        <button type="button" class="accordion-trigger" onclick="toggleAccordion(this)">
-            Shipping &amp; Returns <i class="bi bi-chevron-down"></i>
-        </button>
-        <div class="accordion-panel">
-            Free shipping, dispatched within 48-72 hours. 15-day easy returns.
-        </div>
-    </div>
 </div>
+
+<!-- ================= RELATED PRODUCTS ================= -->
 
 {% if related_products %}
+
 <div style="margin-top: var(--space-6);">
-    <h2 style="font-size: var(--text-lg); margin-bottom: var(--space-3);">You May Also Like</h2>
+
+    <h2 style="
+        font-size: var(--text-lg);
+        margin-bottom: var(--space-3);
+    ">
+        You May Also Like
+    </h2>
+
+
     <div class="product-grid">
+
         {% for rp in related_products %}
+
         <div class="product-card">
-            <a class="card-media" href="{{ url_for('main.product_detail', product_id=rp.id) }}">
-                <img src="{{ url_for('static', filename='images/' ~ rp.image_url) if rp.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}" alt="{{ rp.name }}">
+
+            <a class="card-media" href="{{ url_for(
+                'main.product_detail',
+                product_id=rp.id
+            ) }}">
+
+                <img src="{{ url_for(
+                    'static',
+                    filename='images/' ~ rp.image_url
+                ) if rp.image_url
+                else
+                'https://via.placeholder.com/300x300?text=No+Image'
+                }}" alt="{{ rp.name }}">
+
             </a>
+
+
             <div class="card-body">
-                <p class="product-eyebrow">{{ rp.category.name }}</p>
-                <p class="product-name">{{ rp.name }}</p>
-                <p class="product-price">
-                    <span class="current">₹{{ '%.0f' % (rp.discount_price if rp.discount_price else rp.price) }}</span>
+
+                <p class="product-eyebrow">
+                    {{ rp.category.name }}
                 </p>
+
+                <p class="product-name">
+                    {{ rp.name }}
+                </p>
+
+                <p class="product-price">
+
+                    <span class="current">
+                        ₹{{ '%.0f' %
+                        (rp.discount_price
+                        if rp.discount_price
+                        else rp.price) }}
+                    </span>
+
+                </p>
+
             </div>
+
         </div>
+
         {% endfor %}
+
     </div>
+
+
 </div>
+
 {% endif %}
+
 {% endblock %}
+
+
 
 {% block extra_js %}
 <script>
@@ -191,18 +442,28 @@
         if (sizeInput) sizeInput.value = el.dataset.size;
     }
 
-    // Initialize hidden size input with the first (default-selected) size
     document.addEventListener('DOMContentLoaded', function () {
         const firstSize = document.querySelector('.size-btn.selected');
         const sizeInput = document.getElementById('selectedSizeInput');
         if (firstSize && sizeInput) sizeInput.value = firstSize.dataset.size;
     });
 
-    function toggleAccordion(trigger) {
-        const panel = trigger.nextElementSibling;
-        const isOpen = panel.classList.contains('open');
-        panel.classList.toggle('open', !isOpen);
-        trigger.classList.toggle('open', !isOpen);
+    function selectTab(btn, panelId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(panelId).classList.add('active');
+    }
+
+    function openLightbox(src) {
+        document.getElementById('lightboxImage').src = src;
+        document.getElementById('lightboxOverlay').classList.add('open');
+    }
+
+    function closeLightbox(event) {
+        if (event.target.id === 'lightboxOverlay' || event.target.classList.contains('lightbox-close')) {
+            document.getElementById('lightboxOverlay').classList.remove('open');
+        }
     }
 </script>
 {% endblock %}

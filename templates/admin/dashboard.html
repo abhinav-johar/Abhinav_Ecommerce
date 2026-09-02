@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>Admin Dashboard</h1>
+</div>
+
+<div class="admin-subnav">
+    <a href="{{ url_for('admin.dashboard') }}" class="active">Dashboard</a>
+    <a href="{{ url_for('admin.manage_products') }}">Products</a>
+    <a href="{{ url_for('admin.manage_orders') }}">Orders</a>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <p class="stat-label">Total Products</p>
+        <p class="stat-value">{{ stats.total_products }}</p>
+    </div>
+    <div class="stat-card {{ 'warning' if stats.low_stock_products > 0 else '' }}">
+        <p class="stat-label">Low Stock (&le;10)</p>
+        <p class="stat-value">{{ stats.low_stock_products }}</p>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">Total Orders</p>
+        <p class="stat-value">{{ stats.total_orders }}</p>
+    </div>
+    <div class="stat-card {{ 'warning' if stats.pending_orders > 0 else '' }}">
+        <p class="stat-label">Pending Orders</p>
+        <p class="stat-value">{{ stats.pending_orders }}</p>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">Total Revenue</p>
+        <p class="stat-value">₹{{ '%.0f' % stats.total_revenue }}</p>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">Customers</p>
+        <p class="stat-value">{{ stats.total_customers }}</p>
+    </div>
+</div>
+
+<h2 style="font-size: var(--text-md); margin-bottom: var(--space-3);">Recent Orders</h2>
+<table class="admin-table">
+    <thead>
+        <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in recent_orders %}
+        <tr>
+            <td>#{{ order.id }}</td>
+            <td>{{ order.user.name }}</td>
+            <td>₹{{ '%.0f' % order.total_amount }}</td>
+            <td><span class="status-badge {{ order.status }}">{{ order.status }}</span></td>
+            <td><span class="status-badge {{ order.payment_status }}">{{ order.payment_status }}</span></td>
+            <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="muted center">No orders yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

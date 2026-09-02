@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit Product' if product else 'Add Product' }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>{{ 'Edit Product' if product else 'Add New Product' }}</h1>
+</div>
+
+<div class="admin-subnav">
+    <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('admin.manage_products') }}" class="active">Products</a>
+    <a href="{{ url_for('admin.manage_orders') }}">Orders</a>
+</div>
+
+<form class="admin-form" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+        <label for="name">Product Name</label>
+        <input type="text" id="name" name="name" value="{{ product.name if product else form_data.get('name', '') }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ product.description if product else form_data.get('description', '') }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="fabric_care">Fabric &amp; Care</label>
+        <textarea id="fabric_care" name="fabric_care" placeholder="e.g. Machine wash cold. Do not bleach.">{{ product.fabric_care if product else form_data.get('fabric_care', '') }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="technical_specification">Technical Specification</label>
+        <textarea id="technical_specification" name="technical_specification" placeholder="e.g. Material, fit, weight">{{ product.technical_specification if product else form_data.get('technical_specification', '') }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="warranty_info">Warranty</label>
+        <textarea id="warranty_info" name="warranty_info" placeholder="e.g. 6-month manufacturing defect warranty">{{ product.warranty_info if product else form_data.get('warranty_info', '') }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="shipping_returns">Shipping &amp; Returns</label>
+        <textarea id="shipping_returns" name="shipping_returns" placeholder="e.g. Free shipping, 15-day returns">{{ product.shipping_returns if product else form_data.get('shipping_returns', '') }}</textarea>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="price">Price (₹)</label>
+            <input type="number" id="price" name="price" step="0.01" min="0"
+                   value="{{ product.price if product else form_data.get('price', '') }}" required>
+        </div>
+        <div class="form-group">
+            <label for="discount_price">Discount Price (₹) — optional</label>
+            <input type="number" id="discount_price" name="discount_price" step="0.01" min="0"
+                   value="{{ product.discount_price if product and product.discount_price else '' }}">
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="stock_quantity">Stock Quantity</label>
+            <input type="number" id="stock_quantity" name="stock_quantity" min="0"
+                   value="{{ product.stock_quantity if product else form_data.get('stock_quantity', 0) }}" required>
+        </div>
+        <div class="form-group">
+            <label for="category_id">Category</label>
+            <select id="category_id" name="category_id" required>
+                <option value="">Select a category</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}"
+                    {{ 'selected' if product and product.category_id == category.id else '' }}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    {% if product and product.image_url %}
+    <div class="form-group current-image">
+        <label>Current Image</label>
+        <img src="{{ url_for('static', filename='images/' ~ product.image_url) }}" alt="{{ product.name }}">
+    </div>
+    {% endif %}
+
+    <div class="form-group">
+        <label for="image">{{ 'Replace Image' if product else 'Product Image' }}</label>
+        <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/webp">
+    </div>
+
+    {% if product and product.images %}
+    <div class="form-group">
+        <label>Existing Gallery Images</label>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--space-3);">
+            {% for img in product.images %}
+            <div style="text-align:center;">
+                <img src="{{ url_for('static', filename='images/' ~ img.image_url) }}" alt="Gallery image"
+                     style="width:80px; height:80px; object-fit:cover; border-radius:4px; display:block; margin-bottom:4px;">
+                <form action="{{ url_for('admin.delete_product_image', product_id=product.id, image_id=img.id) }}" method="POST"
+                      onsubmit="return confirm('Remove this gallery image?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="danger" style="font-size:0.7rem; padding:2px 8px; border:1px solid var(--color-danger); border-radius:4px; background:#fff; color:var(--color-danger);">Remove</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="form-group">
+        <label for="gallery_images">{{ 'Add More Gallery Photos' if product else 'Gallery Photos (optional, select multiple)' }}</label>
+        <input type="file" id="gallery_images" name="gallery_images" accept="image/png,image/jpeg,image/webp" multiple>
+        <p class="muted" style="font-size: var(--text-xs); margin-top: var(--space-1);">
+            Hold Ctrl (Windows) or Cmd (Mac) to select several photos at once. These appear as extra thumbnails on the product page.
+        </p>
+    </div>
+
+    <div class="form-group form-check">
+        <input type="checkbox" id="is_active" name="is_active"
+               {{ 'checked' if (product.is_active if product else True) else '' }}>
+        <label for="is_active" style="margin-bottom:0;">Active (visible to customers)</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">{{ 'Save Changes' if product else 'Add Product' }}</button>
+    <a href="{{ url_for('admin.manage_products') }}" class="btn btn-outline" style="margin-left: var(--space-2);">Cancel</a>
+</form>
+{% endblock %}

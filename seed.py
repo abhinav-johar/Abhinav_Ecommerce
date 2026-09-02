@@ -7,7 +7,7 @@ from app import create_app
 from app.extensions import db, bcrypt
 from app.models import (
     Category, Product, ProductVariant, User, Cart, Address,
-    CartItem, Order, OrderItem, Payment,
+    CartItem, Order, OrderItem, Payment, ProductImage,
 )
 
 app = create_app()
@@ -19,6 +19,7 @@ with app.app_context():
     Order.query.delete()
     CartItem.query.delete()
     ProductVariant.query.delete()
+    ProductImage.query.delete()
     Product.query.delete()
     Category.query.delete()
     db.session.commit()
@@ -31,7 +32,7 @@ with app.app_context():
             email='test@one8.com',
             password_hash=bcrypt.generate_password_hash('password123').decode('utf-8'),
             phone='9999999999',
-            is_admin=False,
+            is_admin=True,
         )
         db.session.add(test_user)
         db.session.commit()
@@ -39,6 +40,10 @@ with app.app_context():
         # Every user gets exactly one cart (per your schema)
         cart = Cart(user_id=test_user.id)
         db.session.add(cart)
+        db.session.commit()
+    elif not test_user.is_admin:
+        # Existing test user from before is_admin was seeded true - promote them
+        test_user.is_admin = True
         db.session.commit()
 
     # ---------------- Test Address (temporary, until 'add address' form is built) ----------------
@@ -77,7 +82,7 @@ with app.app_context():
             price=799.0,
             discount_price=599.0,
             stock_quantity=50,
-            image_url='products/tshirt_classic.webp',
+            image_url='products/tshirt_classic.jpg',
             category_id=men.id,
             is_active=True,
         ),
@@ -87,7 +92,17 @@ with app.app_context():
             price=1999.0,
             discount_price=1499.0,
             stock_quantity=30,
-            image_url='products/jeans_slim.webp',
+            image_url='products/jeans_slim.jpg',
+            category_id=men.id,
+            is_active=True,
+        ),
+        Product(
+            name='Sync Workwear Jacket',
+            description='Classic workwear jacket built in technical fabric for travel and everyday wear.',
+            price=4999.0,
+            discount_price=None,
+            stock_quantity=20,
+            image_url='products/jacket_workwear.jpg',
             category_id=men.id,
             is_active=True,
         ),
@@ -97,7 +112,27 @@ with app.app_context():
             price=1599.0,
             discount_price=None,
             stock_quantity=25,
-            image_url='products/dress_floral_summer.jpg',
+            image_url='products/dress_floral.jpg',
+            category_id=women.id,
+            is_active=True,
+        ),
+        Product(
+            name='High-Rise Leggings',
+            description='Stretch leggings built for training and everyday wear.',
+            price=1299.0,
+            discount_price=999.0,
+            stock_quantity=35,
+            image_url='products/leggings_highrise.jpg',
+            category_id=women.id,
+            is_active=True,
+        ),
+        Product(
+            name='Cropped Zip Jacket',
+            description='Lightweight cropped jacket with full zip closure.',
+            price=2199.0,
+            discount_price=None,
+            stock_quantity=18,
+            image_url='products/jacket_cropped.jpg',
             category_id=women.id,
             is_active=True,
         ),
@@ -107,7 +142,27 @@ with app.app_context():
             price=2999.0,
             discount_price=2399.0,
             stock_quantity=40,
-            image_url='products/sneaker_running.webp',
+            image_url='products/sneakers_running.jpg',
+            category_id=footwear.id,
+            is_active=True,
+        ),
+        Product(
+            name='Seam Classic Sneakers',
+            description='Minimal court-style sneakers with a clean silhouette.',
+            price=4999.0,
+            discount_price=None,
+            stock_quantity=22,
+            image_url='products/sneakers_seam_classic.jpg',
+            category_id=footwear.id,
+            is_active=True,
+        ),
+        Product(
+            name='Trail Sandals',
+            description='Rugged sandals built for outdoor wear.',
+            price=1499.0,
+            discount_price=None,
+            stock_quantity=28,
+            image_url='products/sandals_trail.jpg',
             category_id=footwear.id,
             is_active=True,
         ),
@@ -121,15 +176,65 @@ with app.app_context():
             category_id=accessories.id,
             is_active=True,
         ),
+        Product(
+            name='Prime Flo Cap',
+            description='Lightweight cap with breathable mesh panels.',
+            price=699.0,
+            discount_price=None,
+            stock_quantity=45,
+            image_url='products/cap_prime_flo.jpg',
+            category_id=accessories.id,
+            is_active=True,
+        ),
+        Product(
+            name='Everyday Backpack',
+            description='Durable backpack with padded laptop compartment.',
+            price=2499.0,
+            discount_price=1999.0,
+            stock_quantity=15,
+            image_url='products/backpack_everyday.jpg',
+            category_id=accessories.id,
+            is_active=True,
+        ),
     ]
 
     db.session.add_all(products)
     db.session.commit()
 
+    # ---------------- Extra Gallery Images ----------------
+    # Product.image_url (set above) is the MAIN/cover image, shown on cards,
+    # cart, and the mega menu. Anything listed here is ADDITIONAL photos
+    # shown only in the gallery on the product detail page.
+    #
+    # Edit this dict once you've uploaded more photos per product to
+    # app/static/images/products/ — key = product name (must match exactly),
+    # value = list of extra filenames (relative to images/, same as image_url).
+    extra_images = {
+        'Classic Cotton T-Shirt': [
+            # 'products/tshirt_classic_2.webp',
+            # 'products/tshirt_classic_3.webp',
+        ],
+        'Slim Fit Jeans': [
+            # 'products/jeans_slim_2.webp',
+        ],
+        'Running Sneakers': [
+            # 'products/sneakers_running_2.webp',
+            # 'products/sneakers_running_3.webp',
+        ],
+        # Add more product names here as you get more photos for them.
+    }
+
+    for product in products:
+        urls = extra_images.get(product.name, [])
+        for i, url in enumerate(urls):
+            db.session.add(ProductImage(product_id=product.id, image_url=url, sort_order=i))
+
+    db.session.commit()
+
     # ---------------- Variants ----------------
     tshirt = products[0]
     jeans = products[1]
-    sneakers = products[3]
+    sneakers = products[6]
 
     variants = [
         ProductVariant(product_id=tshirt.id, size='S', color='Black', stock_quantity=15, sku='TSHIRT-BLK-S'),
