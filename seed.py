@@ -82,7 +82,7 @@ with app.app_context():
             price=799.0,
             discount_price=599.0,
             stock_quantity=50,
-            image_url='products/tshirt_classic.jpg',
+            image_url='products/classic_cotten_tshirt.jpg',
             category_id=men.id,
             is_active=True,
         ),
