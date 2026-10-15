@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}My Addresses{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1 style="font-size: var(--text-lg); margin-bottom: var(--space-4);">My Addresses</h1>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">
+
+    <div>
+        <h3 style="font-size: var(--text-sm); text-transform:uppercase; color:var(--color-muted); margin-bottom: var(--space-3);">Saved Addresses</h3>
+
+        {% for addr in addresses %}
+        <div style="border:1px solid var(--color-line); border-radius:4px; padding: var(--space-3); margin-bottom: var(--space-3);">
+            {% if addr.is_default %}
+            <span class="status-badge delivered" style="margin-bottom:8px; display:inline-block;">Default</span>
+            {% endif %}
+            <p style="font-weight:600;">{{ addr.full_name }}</p>
+            <p class="muted">{{ addr.address_line1 }}{% if addr.address_line2 %}, {{ addr.address_line2 }}{% endif %}</p>
+            <p class="muted">{{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}</p>
+            <p class="muted">Phone: {{ addr.phone }}</p>
+
+            <div style="display:flex; gap: var(--space-2); margin-top: var(--space-2);">
+                <a href="{{ url_for('auth.addresses', edit=addr.id) }}" class="btn btn-outline" style="padding:6px 12px; font-size:var(--text-xs);">Edit</a>
+
+                {% if not addr.is_default %}
+                <form action="{{ url_for('auth.set_default_address', address_id=addr.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline" style="padding:6px 12px; font-size:var(--text-xs);">Set as Default</button>
+                </form>
+                {% endif %}
+
+                <form action="{{ url_for('auth.delete_address', address_id=addr.id) }}" method="POST" onsubmit="return confirm('Delete this address?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" style="padding:6px 12px; font-size:var(--text-xs); border:1px solid var(--color-danger); color:var(--color-danger); background:#fff; border-radius:4px;">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <p class="muted">No saved addresses yet. Add one using the form.</p>
+        {% endfor %}
+    </div>
+
+    <div>
+        <h3 style="font-size: var(--text-sm); text-transform:uppercase; color:var(--color-muted); margin-bottom: var(--space-3);">
+            {{ 'Edit Address' if editing_address else 'Add New Address' }}
+        </h3>
+
+        <form method="POST" class="admin-form" action="{{ url_for('auth.addresses', next=request.args.get('next')) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if editing_address %}<input type="hidden" name="address_id" value="{{ editing_address.id }}">{% endif %}
+
+            <div class="form-group">
+                <label for="full_name">Full Name</label>
+                <input type="text" id="full_name" name="full_name" value="{{ editing_address.full_name if editing_address else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" value="{{ editing_address.phone if editing_address else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="address_line1">Address Line 1</label>
+                <input type="text" id="address_line1" name="address_line1" value="{{ editing_address.address_line1 if editing_address else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="address_line2">Address Line 2 (optional)</label>
+                <input type="text" id="address_line2" name="address_line2" value="{{ editing_address.address_line2 if editing_address else '' }}">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <input type="text" id="city" name="city" value="{{ editing_address.city if editing_address else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="state">State</label>
+                    <input type="text" id="state" name="state" value="{{ editing_address.state if editing_address else '' }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="pincode">Pincode</label>
+                <input type="text" id="pincode" name="pincode" value="{{ editing_address.pincode if editing_address else '' }}" required>
+            </div>
+
+            <div class="form-group form-check">
+                <input type="checkbox" id="is_default" name="is_default" {{ 'checked' if editing_address and editing_address.is_default else '' }}>
+                <label for="is_default" style="margin-bottom:0;">Set as default address</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">{{ 'Save Changes' if editing_address else 'Add Address' }}</button>
+            {% if editing_address %}
+            <a href="{{ url_for('auth.addresses') }}" class="btn btn-outline" style="margin-left: var(--space-2);">Cancel</a>
+            {% endif %}
+        </form>
+    </div>
+
+</div>
+{% endblock %}

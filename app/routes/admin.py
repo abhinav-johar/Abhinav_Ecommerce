@@ -5,10 +5,88 @@ from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Product, Category, Order, OrderItem, User, ProductImage
+from app.models import Product, Category, Order, OrderItem, User, ProductImage, ProductVariant, CartItem
 from app.utils import save_uploaded_image
 
 admin_bp = Blueprint('admin', __name__)
+
+
+def save_gallery_rows(product, starting_sort_order=0):
+    """
+    Reads new_gallery_image[] / new_gallery_color[] parallel lists from the
+    submitted form (one file input + one color text input per row, added via
+    the '+ Add Photo' button) and creates a ProductImage for each file
+    actually provided. Color is optional - leave blank for an uncategorized photo.
+    """
+    gallery_files = request.files.getlist('new_gallery_image[]')
+    gallery_colors = request.form.getlist('new_gallery_color[]')
+
+    order = starting_sort_order
+    for i, gfile in enumerate(gallery_files):
+        gallery_url = save_uploaded_image(
+            gfile,
+            current_app.config['UPLOAD_FOLDER'],
+            current_app.config['ALLOWED_EXTENSIONS'],
+        )
+        if not gallery_url:
+            continue  # empty row / no file selected
+
+        color = gallery_colors[i].strip() if i < len(gallery_colors) else ''
+        db.session.add(ProductImage(
+            product_id=product.id,
+            image_url=gallery_url,
+            sort_order=order,
+            color=color or None,
+        ))
+        order += 1
+
+    db.session.commit()
+
+
+def save_variant_rows(product):
+    """
+    Reads variant_size[]/variant_color[]/variant_stock[]/variant_sku[] parallel
+    lists from the submitted form and creates a ProductVariant for each row
+    that has at least a size or a color filled in. Rows left completely blank
+    (from unused 'Add Variant' clicks) are skipped.
+    """
+    sizes = request.form.getlist('variant_size[]')
+    colors = request.form.getlist('variant_color[]')
+    stocks = request.form.getlist('variant_stock[]')
+    skus = request.form.getlist('variant_sku[]')
+
+    created_any = False
+
+    for i in range(len(sizes)):
+        size = sizes[i].strip() if i < len(sizes) else ''
+        color = colors[i].strip() if i < len(colors) else ''
+        stock_raw = stocks[i].strip() if i < len(stocks) else ''
+        sku = skus[i].strip() if i < len(skus) else ''
+
+        if not size and not color:
+            continue  # blank row, skip
+
+        stock_val = int(stock_raw) if stock_raw.isdigit() else 0
+
+        if not sku:
+            # Auto-generate a reasonably unique SKU if left blank
+            sku = f'{product.id}-{size or "NA"}-{color or "NA"}-{ProductVariant.query.count() + 1}'.upper().replace(' ', '')
+
+        db.session.add(ProductVariant(
+            product_id=product.id,
+            size=size or None,
+            color=color or None,
+            stock_quantity=stock_val,
+            sku=sku,
+        ))
+        created_any = True
+
+    if created_any:
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('One or more variant SKUs were already in use, so those rows were skipped. Try again with unique SKUs.', 'error')
 
 
 def admin_required(f):
@@ -97,17 +175,8 @@ def add_product():
         db.session.add(product)
         db.session.commit()
 
-        # Multiple gallery images (extra photos beyond the main image above)
-        gallery_files = request.files.getlist('gallery_images')
-        for i, gfile in enumerate(gallery_files):
-            gallery_url = save_uploaded_image(
-                gfile,
-                current_app.config['UPLOAD_FOLDER'],
-                current_app.config['ALLOWED_EXTENSIONS'],
-            )
-            if gallery_url:
-                db.session.add(ProductImage(product_id=product.id, image_url=gallery_url, sort_order=i))
-        db.session.commit()
+        save_gallery_rows(product)
+        save_variant_rows(product)
 
         flash(f'"{product.name}" was added successfully.', 'success')
         return redirect(url_for('admin.manage_products'))
@@ -145,22 +214,9 @@ def edit_product(product_id):
 
         db.session.commit()
 
-        # Multiple new gallery images -> append after existing ones
-        gallery_files = request.files.getlist('gallery_images')
         existing_max_order = max([img.sort_order for img in product.images], default=-1)
-        for i, gfile in enumerate(gallery_files):
-            gallery_url = save_uploaded_image(
-                gfile,
-                current_app.config['UPLOAD_FOLDER'],
-                current_app.config['ALLOWED_EXTENSIONS'],
-            )
-            if gallery_url:
-                db.session.add(ProductImage(
-                    product_id=product.id,
-                    image_url=gallery_url,
-                    sort_order=existing_max_order + 1 + i,
-                ))
-        db.session.commit()
+        save_gallery_rows(product, starting_sort_order=existing_max_order + 1)
+        save_variant_rows(product)
 
         flash(f'"{product.name}" was updated.', 'success')
         return redirect(url_for('admin.manage_products'))
@@ -175,6 +231,38 @@ def delete_product_image(product_id, image_id):
     db.session.delete(image)
     db.session.commit()
     flash('Gallery image removed.', 'success')
+    return redirect(url_for('admin.edit_product', product_id=product_id))
+
+
+@admin_bp.route('/products/<int:product_id>/images/<int:image_id>/set-color', methods=['POST'])
+@admin_required
+def set_product_image_color(product_id, image_id):
+    image = ProductImage.query.filter_by(id=image_id, product_id=product_id).first_or_404()
+    color = request.form.get('color', '').strip()
+    image.color = color or None
+    db.session.commit()
+    flash('Image color updated.', 'success')
+    return redirect(url_for('admin.edit_product', product_id=product_id))
+
+
+@admin_bp.route('/products/<int:product_id>/variants/<int:variant_id>/delete', methods=['POST'])
+@admin_required
+def delete_product_variant(product_id, variant_id):
+    variant = ProductVariant.query.filter_by(id=variant_id, product_id=product_id).first_or_404()
+
+    # Clear any stale cart entries referencing this variant first - safe,
+    # since those are just leftover shopping-cart data, not order history.
+    CartItem.query.filter_by(variant_id=variant.id).delete()
+    db.session.commit()
+
+    try:
+        db.session.delete(variant)
+        db.session.commit()
+        flash('Variant removed.', 'success')
+    except IntegrityError:
+        db.session.rollback()
+        flash('This variant is part of a past order and can\'t be removed.', 'error')
+
     return redirect(url_for('admin.edit_product', product_id=product_id))
 
 

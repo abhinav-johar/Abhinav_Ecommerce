@@ -92,9 +92,10 @@ class ProductImage(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     image_url = db.Column(db.String(250), nullable=False)
     sort_order = db.Column(db.Integer, default=0)
+    color = db.Column(db.String(30), nullable=True)  # optional tag, e.g. 'Black' - lets clicking a color swatch show only that color's photos
 
     def __repr__(self):
-        return f'<ProductImage product_id={self.product_id} url={self.image_url}>'
+        return f'<ProductImage product_id={self.product_id} url={self.image_url} color={self.color}>'
 
 
 # ==========================================================

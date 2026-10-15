@@ -12,21 +12,23 @@ def is_ajax_request():
 
 
 def get_checkout_context():
-    """Returns (cart_items, subtotal, address, error_message)."""
+    """Returns (cart_items, subtotal, address, error_message, redirect_endpoint)."""
     cart = Cart.query.filter_by(user_id=current_user.id).first()
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all() if cart else []
 
     if not cart_items:
-        return None, None, None, 'Your cart is empty.'
+        return None, None, None, 'Your cart is empty.', url_for('cart.view_cart')
 
     address = Address.query.filter_by(user_id=current_user.id, is_default=True).first()
     if not address:
         address = Address.query.filter_by(user_id=current_user.id).first()
     if not address:
-        return None, None, None, 'Please add a delivery address before checking out.'
+        # Send them straight to the add-address form, with a way back to checkout after
+        add_address_url = url_for('auth.addresses', next=url_for('checkout.checkout'))
+        return None, None, None, 'Please add a delivery address before checking out.', add_address_url
 
     subtotal = sum(item.price_at_time * item.quantity for item in cart_items)
-    return cart_items, subtotal, address, None
+    return cart_items, subtotal, address, None, None
 
 
 @checkout_bp.route('/', methods=['GET'])
@@ -37,13 +39,13 @@ def checkout():
             return jsonify(success=False, needs_login=True, login_url=login_url)
         return redirect(login_url)
 
-    cart_items, subtotal, address, error = get_checkout_context()
+    cart_items, subtotal, address, error, redirect_to = get_checkout_context()
 
     if error:
         if is_ajax_request():
-            return jsonify(success=False, message=error, redirect=url_for('cart.view_cart'))
+            return jsonify(success=False, message=error, redirect=redirect_to)
         flash(error, 'error')
-        return redirect(url_for('cart.view_cart'))
+        return redirect(redirect_to)
 
     if is_ajax_request():
         html = render_template(
@@ -63,13 +65,13 @@ def place_order():
             return jsonify(success=False, needs_login=True, login_url=login_url), 401
         return redirect(login_url)
 
-    cart_items, subtotal, address, error = get_checkout_context()
+    cart_items, subtotal, address, error, redirect_to = get_checkout_context()
 
     if error:
         if is_ajax_request():
-            return jsonify(success=False, message=error), 400
+            return jsonify(success=False, message=error, redirect=redirect_to), 400
         flash(error, 'error')
-        return redirect(url_for('cart.view_cart'))
+        return redirect(redirect_to)
 
     # Re-validate stock right before placing the order
     for item in cart_items:

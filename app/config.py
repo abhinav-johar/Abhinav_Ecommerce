@@ -31,4 +31,4 @@ class Config:
 
 
 
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 5MB

@@ -14,7 +14,8 @@
 
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body>
+
     <!-- ================= HEADER / NAV ================= -->
     <header class="site-header">
         <div class="container header-inner">
@@ -192,7 +193,26 @@
         </div>
     </aside>
 
+    <!-- ================= CHECKOUT MODAL ================= -->
+    <div class="modal-overlay" id="checkoutModalOverlay">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <h2>Checkout</h2>
+                <button class="modal-close" id="checkoutModalClose" aria-label="Close checkout">&times;</button>
+            </div>
+            <div class="modal-body" id="checkoutModalBody">
+                <p class="muted center" style="margin-top:2rem;">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global CSRF token - used by cart.js so AJAX requests work on every
+        // page, even ones with no visible form to scrape a token from.
+        window.CSRF_TOKEN = "{{ csrf_token() }}";
+    </script>
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>

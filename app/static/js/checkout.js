@@ -24,6 +24,10 @@ function openCheckoutModal() {
                 return;
             }
             if (!data.success) {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
                 checkoutModalBody.innerHTML = `<p class="center" style="color:var(--color-danger); margin-top:2rem;">${data.message}</p>`;
                 return;
             }

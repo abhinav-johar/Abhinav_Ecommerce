@@ -3,17 +3,19 @@
 {% block title %}My Profile{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="mb-4">My Profile</h4>
-                <p><strong>Name:</strong> {{ user.name }}</p>
-                <p><strong>Email:</strong> {{ user.email }}</p>
-                <p><strong>Phone:</strong> {{ user.phone or 'Not provided' }}</p>
-                <p class="mb-0"><strong>Member since:</strong> {{ user.created_at.strftime('%B %Y') }}</p>
-            </div>
-        </div>
+<h1 style="font-size: var(--text-lg); margin-bottom: var(--space-4);">My Profile</h1>
+
+<div style="max-width: 480px;">
+    <div style="border:1px solid var(--color-line); border-radius:4px; padding: var(--space-4); margin-bottom: var(--space-4);">
+        <p style="margin-bottom: var(--space-2);"><strong>Name:</strong> {{ user.name }}</p>
+        <p style="margin-bottom: var(--space-2);"><strong>Email:</strong> {{ user.email }}</p>
+        <p style="margin-bottom: var(--space-2);"><strong>Phone:</strong> {{ user.phone or 'Not provided' }}</p>
+        <p><strong>Member since:</strong> {{ user.created_at.strftime('%B %Y') }}</p>
+    </div>
+
+    <div style="display:flex; gap: var(--space-2);">
+        <a href="{{ url_for('auth.addresses') }}" class="btn btn-outline">Manage Addresses</a>
+        <a href="{{ url_for('orders.order_history') }}" class="btn btn-outline">My Orders</a>
     </div>
 </div>
 {% endblock %}

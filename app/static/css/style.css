@@ -1331,11 +1331,10 @@ img {
 
 .tab-list {
     display: flex;
-    gap: var(--space-5);
+    justify-content: space-between;
     border-bottom: 1px solid var(--color-line);
     overflow-x: auto;
 }
-
 .tab-btn {
     background: none;
     border: none;
@@ -1363,7 +1362,7 @@ img {
 
 .tab-panel {
     display: none;
-    max-width: 700px;
+    width: 100%;
     color: var(--color-muted);
     font-size: var(--text-sm);
 }

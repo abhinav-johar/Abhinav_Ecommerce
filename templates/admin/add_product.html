@@ -98,15 +98,28 @@
     {% if product and product.images %}
     <div class="form-group">
         <label>Existing Gallery Images</label>
-        <div style="display:flex; flex-wrap:wrap; gap: var(--space-3);">
+        <p class="muted" style="font-size: var(--text-xs); margin-bottom: var(--space-2);">
+            Tag each photo with a color (matching exactly what you typed in the Variants section below) so that
+            clicking that color on the product page shows only these photos. Leave blank for a general photo
+            shown regardless of color.
+        </p>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--space-4);">
             {% for img in product.images %}
-            <div style="text-align:center;">
+            <div style="text-align:center; width:110px;">
                 <img src="{{ url_for('static', filename='images/' ~ img.image_url) }}" alt="Gallery image"
-                     style="width:80px; height:80px; object-fit:cover; border-radius:4px; display:block; margin-bottom:4px;">
+                     style="width:90px; height:90px; object-fit:cover; border-radius:4px; display:block; margin-bottom:6px;">
+
+                <form action="{{ url_for('admin.set_product_image_color', product_id=product.id, image_id=img.id) }}" method="POST" style="margin-bottom:4px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="color" value="{{ img.color or '' }}" placeholder="Color"
+                           style="width:100%; padding:4px; font-size:0.75rem; border:1px solid var(--color-line); border-radius:4px; margin-bottom:4px;">
+                    <button type="submit" style="width:100%; font-size:0.7rem; padding:3px; border:1px solid var(--color-line); border-radius:4px; background:#fff;">Save Color</button>
+                </form>
+
                 <form action="{{ url_for('admin.delete_product_image', product_id=product.id, image_id=img.id) }}" method="POST"
                       onsubmit="return confirm('Remove this gallery image?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="danger" style="font-size:0.7rem; padding:2px 8px; border:1px solid var(--color-danger); border-radius:4px; background:#fff; color:var(--color-danger);">Remove</button>
+                    <button type="submit" style="width:100%; font-size:0.7rem; padding:3px; border:1px solid var(--color-danger); border-radius:4px; background:#fff; color:var(--color-danger);">Remove</button>
                 </form>
             </div>
             {% endfor %}
@@ -115,10 +128,41 @@
     {% endif %}
 
     <div class="form-group">
-        <label for="gallery_images">{{ 'Add More Gallery Photos' if product else 'Gallery Photos (optional, select multiple)' }}</label>
-        <input type="file" id="gallery_images" name="gallery_images" accept="image/png,image/jpeg,image/webp" multiple>
+        <label>{{ 'Add More Gallery Photos' if product else 'Gallery Photos — optional' }}</label>
+        <p class="muted" style="font-size: var(--text-xs); margin-bottom: var(--space-2);">
+            Add one row per photo. Tag the color it shows (must match a color used in Variants below) so clicking
+            that color swatch displays this photo. Leave color blank for a general photo.
+        </p>
+        <div id="newGalleryRows"></div>
+        <button type="button" onclick="addGalleryRow()" class="btn btn-outline" style="margin-top: var(--space-2);">+ Add Photo</button>
+    </div>
+
+    <div class="form-group">
+        <label>Variants (Size / Color) — optional, leave empty for a single-option product</label>
+
+        {% if product and product.variants %}
+        <div style="margin-bottom: var(--space-3);">
+            {% for v in product.variants %}
+            <div style="display:flex; align-items:center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom:1px solid var(--color-line); font-size: var(--text-sm);">
+                <span style="flex:1;">
+                    {{ v.size or '—' }} / {{ v.color or '—' }}
+                    <span class="muted">· Stock: {{ v.stock_quantity }} · SKU: {{ v.sku }}</span>
+                </span>
+                <form action="{{ url_for('admin.delete_product_variant', product_id=product.id, variant_id=v.id) }}" method="POST"
+                      onsubmit="return confirm('Remove this variant?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" style="font-size:0.7rem; padding:2px 8px; border:1px solid var(--color-danger); border-radius:4px; background:#fff; color:var(--color-danger);">Remove</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div id="newVariantRows"></div>
+
+        <button type="button" onclick="addVariantRow()" class="btn btn-outline" style="margin-top: var(--space-2);">+ Add Variant</button>
         <p class="muted" style="font-size: var(--text-xs); margin-top: var(--space-1);">
-            Hold Ctrl (Windows) or Cmd (Mac) to select several photos at once. These appear as extra thumbnails on the product page.
+            {{ 'New rows are added to this product; existing variants above are separate.' if product else 'Add one row per Size/Color combination, e.g. "M" + "Black", "L" + "Blue".' }}
         </p>
     </div>
 
@@ -131,4 +175,44 @@
     <button type="submit" class="btn btn-primary">{{ 'Save Changes' if product else 'Add Product' }}</button>
     <a href="{{ url_for('admin.manage_products') }}" class="btn btn-outline" style="margin-left: var(--space-2);">Cancel</a>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function addGalleryRow() {
+        const container = document.getElementById('newGalleryRows');
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.marginBottom = '8px';
+        row.style.alignItems = 'center';
+
+        row.innerHTML = `
+            <input type="file" name="new_gallery_image[]" accept="image/png,image/jpeg,image/webp" style="flex:2;">
+            <input type="text" name="new_gallery_color[]" placeholder="Color (optional, e.g. Black)" style="flex:1; padding:8px; border:1px solid var(--color-line); border-radius:4px;">
+            <button type="button" onclick="this.parentElement.remove()" style="padding:8px 12px; border:1px solid var(--color-danger); color:var(--color-danger); background:#fff; border-radius:4px;">&times;</button>
+        `;
+
+        container.appendChild(row);
+    }
+
+    function addVariantRow() {
+        const container = document.getElementById('newVariantRows');
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.marginBottom = '8px';
+        row.style.alignItems = 'center';
+
+        row.innerHTML = `
+            <input type="text" name="variant_size[]" placeholder="Size (e.g. M)" style="flex:1; padding:8px; border:1px solid var(--color-line); border-radius:4px;">
+            <input type="text" name="variant_color[]" placeholder="Color (e.g. Black)" style="flex:1; padding:8px; border:1px solid var(--color-line); border-radius:4px;">
+            <input type="number" name="variant_stock[]" placeholder="Stock" min="0" style="width:90px; padding:8px; border:1px solid var(--color-line); border-radius:4px;">
+            <input type="text" name="variant_sku[]" placeholder="SKU (optional)" style="flex:1; padding:8px; border:1px solid var(--color-line); border-radius:4px;">
+            <button type="button" onclick="this.parentElement.remove()" style="padding:8px 12px; border:1px solid var(--color-danger); color:var(--color-danger); background:#fff; border-radius:4px;">&times;</button>
+        `;
+
+        container.appendChild(row);
+    }
+</script>
 {% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('main.index') }}">Home</a>
+    <span class="sep">/</span>
+    <a href="{{ url_for('orders.order_history') }}">My Orders</a>
+    <span class="sep">/</span>
+    <span class="current">Order #{{ order.id }}</span>
+</div>
+
+<h1 style="font-size: var(--text-lg); margin-bottom: var(--space-3);">Order #{{ order.id }}</h1>
+
+<div style="max-width: 600px;">
+    <div class="checkout-summary-row">
+        <span>Status</span>
+        <span class="status-badge {{ order.status }}">{{ order.status }}</span>
+    </div>
+    <div class="checkout-summary-row">
+        <span>Payment</span>
+        <span class="status-badge {{ order.payment_status }}">{{ order.payment_status }}</span>
+    </div>
+    <div class="checkout-summary-row">
+        <span>Placed On</span>
+        <span>{{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+    </div>
+
+    <div class="checkout-section" style="margin-top: var(--space-4);">
+        <h3>Delivered To</h3>
+        <p style="font-weight:600;">{{ order.address.full_name }}</p>
+        <p class="muted">{{ order.address.address_line1 }}{% if order.address.address_line2 %}, {{ order.address.address_line2 }}{% endif %}</p>
+        <p class="muted">{{ order.address.city }}, {{ order.address.state }} - {{ order.address.pincode }}</p>
+        <p class="muted">Phone: {{ order.address.phone }}</p>
+    </div>
+
+    <div class="checkout-section">
+        <h3>Items</h3>
+        {% for item in order_items %}
+        <div class="checkout-item-row">
+            <span>
+                {{ item.product.name }}
+                {% if item.variant %}
+                    <span class="muted" style="font-size:var(--text-xs);">
+                        ({% if item.variant.size %}{{ item.variant.size }}{% endif %}{% if item.variant.color %}, {{ item.variant.color }}{% endif %})
+                    </span>
+                {% endif %}
+                <span class="muted">x{{ item.quantity }}</span>
+            </span>
+            <span>₹{{ '%.0f' % (item.price_at_purchase * item.quantity) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="checkout-total-row">
+        <span>Total</span>
+        <span>₹{{ '%.0f' % order.total_amount }}</span>
+    </div>
+</div>
+{% endblock %}

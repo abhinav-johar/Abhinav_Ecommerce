@@ -96,8 +96,7 @@ function loadCartDrawer() {
 function updateCartItemQuantity(itemId, newQuantity) {
     const formData = new FormData();
     formData.append('quantity', newQuantity);
-    const csrfInput = document.querySelector('input[name="csrf_token"]');
-    if (csrfInput) formData.append('csrf_token', csrfInput.value);
+    formData.append('csrf_token', window.CSRF_TOKEN || '');
 
     fetch(`/cart/update/${itemId}`, {
         method: 'POST',
@@ -111,13 +110,13 @@ function updateCartItemQuantity(itemId, newQuantity) {
             } else {
                 alert(data.message || 'Could not update item.');
             }
-        });
+        })
+        .catch(() => alert('Could not update item. Please try again.'));
 }
 
 function removeCartItem(itemId) {
-    const csrfInput = document.querySelector('input[name="csrf_token"]');
     const formData = new FormData();
-    if (csrfInput) formData.append('csrf_token', csrfInput.value);
+    formData.append('csrf_token', window.CSRF_TOKEN || '');
 
     fetch(`/cart/remove/${itemId}`, {
         method: 'POST',
@@ -125,7 +124,8 @@ function removeCartItem(itemId) {
         body: formData
     })
         .then(res => res.json())
-        .then(data => renderCartDrawer(data));
+        .then(data => renderCartDrawer(data))
+        .catch(() => alert('Could not remove item. Please try again.'));
 }
 
 // Event delegation: handles +/- and remove buttons even though
