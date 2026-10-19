@@ -9,3 +9,4 @@ Flask-Bcrypt
 gunicorn
 PyMySQL
 cryptography
+email_validator
