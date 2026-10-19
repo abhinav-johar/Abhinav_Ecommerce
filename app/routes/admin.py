@@ -2,10 +2,11 @@ from functools import wraps
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Product, Category, Order, OrderItem, User, ProductImage, ProductVariant, CartItem
+from app.models import Product, Category, Order, OrderItem, User, ProductImage, ProductVariant, CartItem, Payment
 from app.utils import save_uploaded_image
 
 admin_bp = Blueprint('admin', __name__)
@@ -126,7 +127,12 @@ def dashboard():
 @admin_required
 def manage_products():
     products = Product.query.order_by(Product.created_at.desc()).all()
-    return render_template('admin/manage_product.html', products=products)
+    # How many past order lines each product appears in (decides which delete button to show)
+    order_counts = dict(
+        db.session.query(OrderItem.product_id, func.count(OrderItem.id))
+        .group_by(OrderItem.product_id).all()
+    )
+    return render_template('admin/manage_product.html', products=products, order_counts=order_counts)
 
 
 @admin_bp.route('/products/add', methods=['GET', 'POST'])
@@ -266,24 +272,64 @@ def delete_product_variant(product_id, variant_id):
     return redirect(url_for('admin.edit_product', product_id=product_id))
 
 
+def _remove_image_files(product):
+    """Best-effort removal of the product's image files from disk."""
+    import os
+    paths = [product.image_url] + [img.image_url for img in product.images]
+    for rel in paths:
+        if not rel:
+            continue
+        full = os.path.join(current_app.static_folder, 'images', rel)
+        try:
+            os.remove(full)
+        except OSError:
+            pass  # already missing - that's fine
+
+
 @admin_bp.route('/products/<int:product_id>/delete', methods=['POST'])
 @admin_required
 def delete_product(product_id):
     product = Product.query.get_or_404(product_id)
+    name = product.name
+    force = request.form.get('force') == '1'
 
-    try:
-        db.session.delete(product)
-        db.session.commit()
-        flash(f'"{product.name}" was deleted.', 'success')
-    except IntegrityError:
-        db.session.rollback()
-        # Product is referenced by past orders (OrderItem has no cascade-delete,
-        # intentionally, so order history never silently loses line items).
-        # Deactivating is the safe alternative to a hard delete here.
+    order_line_count = OrderItem.query.filter_by(product_id=product.id).count()
+
+    # Protect order history unless the admin explicitly chose "Delete permanently"
+    if order_line_count and not force:
         product.is_active = False
         db.session.commit()
-        flash(f'"{product.name}" is part of past orders and can\'t be deleted, so it was deactivated instead.', 'info')
+        flash(f'"{name}" is in {order_line_count} past order line(s), so it was hidden from the shop '
+              f'instead of deleted. Use "Delete permanently" if you really want it gone.', 'info')
+        return redirect(url_for('admin.manage_products'))
 
+    # 1. Leftover shopping-cart entries are safe to remove
+    CartItem.query.filter_by(product_id=product.id).delete()
+
+    # 2. Permanent delete: also remove this product's lines from past orders
+    if order_line_count:
+        affected_order_ids = {oi.order_id for oi in OrderItem.query.filter_by(product_id=product.id).all()}
+        OrderItem.query.filter_by(product_id=product.id).delete()
+        for oid in affected_order_ids:
+            remaining = OrderItem.query.filter_by(order_id=oid).all()
+            if not remaining:
+                # Order has nothing left in it - remove the empty order too
+                Payment.query.filter_by(order_id=oid).delete()
+                Order.query.filter_by(id=oid).delete()
+            else:
+                # Keep the order, but fix its total to match the lines that remain
+                order = db.session.get(Order, oid)
+                order.total_amount = sum(i.price_at_purchase * i.quantity for i in remaining)
+
+    db.session.flush()
+    db.session.expire(product)
+    _remove_image_files(product)
+
+    # Variants, gallery images and reviews are removed automatically (cascade)
+    db.session.delete(product)
+    db.session.commit()
+
+    flash(f'"{name}" was permanently deleted.', 'success')
     return redirect(url_for('admin.manage_products'))
 
 

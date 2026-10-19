@@ -61,11 +61,20 @@
                         <button type="submit">{{ 'Deactivate' if product.is_active else 'Activate' }}</button>
                     </form>
 
+                    {% if order_counts.get(product.id) %}
+                    <form action="{{ url_for('admin.delete_product', product_id=product.id) }}" method="POST"
+                          onsubmit="return confirm('This product is in {{ order_counts.get(product.id) }} past order line(s). Deleting it permanently also removes it from those orders. This cannot be undone. Continue?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="force" value="1">
+                        <button type="submit" class="danger">Delete permanently</button>
+                    </form>
+                    {% else %}
                     <form action="{{ url_for('admin.delete_product', product_id=product.id) }}" method="POST"
                           onsubmit="return confirm('Delete this product? This cannot be undone.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="danger">Delete</button>
                     </form>
+                    {% endif %}
                 </div>
             </td>
         </tr>
