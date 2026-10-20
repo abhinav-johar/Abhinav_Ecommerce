@@ -1,9 +1,17 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request , current_app
 from flask_login import login_user, logout_user, login_required, current_user
 
 from app.extensions import db, bcrypt
 from app.forms import RegisterForm, LoginForm
 from app.models import User, Cart, Address
+from urllib.parse import urlsplit
+
+from sqlalchemy.exc import SQLAlchemyError
+from app.utils.guest_cart import (
+    GUEST_CART_COOKIE,
+    merge_guest_cart_into_user,
+    clear_guest_cart_cookie
+)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -43,7 +51,6 @@ def register():
 
     return render_template('register.html', form=form)
 
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -52,14 +59,84 @@ def login():
     form = LoginForm()
 
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.lower().strip()).first()
+        email = form.email.data.lower().strip()
 
-        if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
+        user = User.query.filter_by(email=email).first()
+
+        if user and bcrypt.check_password_hash(
+            user.password_hash,
+            form.password.data
+        ):
+            # Step 1: Merge the guest cart BEFORE login_user().
+            # At this point, current_user is still anonymous.
+            guest_token = request.cookies.get(GUEST_CART_COOKIE)
+
+            try:
+                merged_count, skipped_count = merge_guest_cart_into_user(
+                    user,
+                    guest_token
+                )
+
+            except SQLAlchemyError:
+                db.session.rollback()
+
+                current_app.logger.exception(
+                    "Database error while merging guest cart during login"
+                )
+
+                flash(
+                    "We couldn't restore your cart right now. "
+                    "Please try logging in again.",
+                    "error"
+                )
+
+                return render_template('login.html', form=form), 500
+
+            # Step 2: Log the user in after the cart merge succeeds.
             login_user(user, remember=form.remember.data)
+
+            # Step 3: Notify the user about the merge, if applicable.
+            if merged_count > 0:
+                flash(
+                    f'{merged_count} cart unit(s) restored to your account.',
+                    'success'
+                )
+
+            if skipped_count > 0:
+                flash(
+                    f'{skipped_count} cart item(s) could not be fully '
+                    'restored because of product availability or stock.',
+                    'warning'
+                )
+
             flash(f'Welcome back, {user.name}!', 'success')
 
+            # Step 4: Only allow safe, local redirects.
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('main.index'))
+
+            if next_page:
+                parsed_url = urlsplit(next_page)
+
+                if (
+                    not parsed_url.scheme
+                    and not parsed_url.netloc
+                    and next_page.startswith('/')
+                    and not next_page.startswith('//')
+                    and '\\' not in next_page
+                ):
+                    destination = next_page
+                else:
+                    destination = url_for('main.index')
+            else:
+                destination = url_for('main.index')
+
+            response = redirect(destination)
+
+            # Step 5: Remove the guest-cart cookie after successful login.
+            response = clear_guest_cart_cookie(response)
+
+            return response
+
         else:
             flash('Invalid email or password.', 'error')
 

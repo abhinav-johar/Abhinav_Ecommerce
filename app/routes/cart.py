@@ -101,12 +101,26 @@ def view_cart():
         product = Product.query.get_or_404(product_id)
 
         # Find the matching variant if only the size was submitted
-        if size and not variant_id:
-            variant = ProductVariant.query.filter_by(
+        # Resolve the exact selected product variant using colour and size.
+        color = request.form.get('color', '').strip()
+
+        if not variant_id and (size or color):
+            variant_query = ProductVariant.query.filter_by(
                 product_id=product.id,
-                size=size
-            ).first()
+                size=size or None,
+                color=color or None
+    )
+
+            variant = variant_query.first()
             variant_id = variant.id if variant else None
+
+# Reject a selection that does not correspond to a real variant.
+        if (size or color) and not variant_id:
+            response = make_response(jsonify(
+                success=False,
+                message='The selected colour and size combination is unavailable.'
+               ), 400)
+            return set_guest_cart_cookie(response)
 
         if quantity < 1:
             quantity = 1

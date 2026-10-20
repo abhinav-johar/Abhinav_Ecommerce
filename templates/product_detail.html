@@ -16,20 +16,19 @@
     <!-- ================= IMAGE GALLERY (2x2 grid, swaps by selected color) ================= -->
     <div class="product-gallery">
 
-        {% set gallery = ([product.image_url] + product.images|map(attribute='image_url')|list) if product.image_url else product.images|map(attribute='image_url')|list %}
+        {% set gallery = ([product.image_url] + product.images|map(attribute='image_url')|list) if product.image_url
+        else product.images|map(attribute='image_url')|list %}
 
-       <div class="product-image-grid">
+        <div class="product-image-grid">
 
-    {% for i in range(4) %}
-    <div class="product-image-section">
-        <img id="galleryImg{{ i }}"
-             src="{{ url_for('static', filename='images/' ~ product.image_url) }}"
-             alt="{{ product.name }}"
-             onclick="openLightbox(this.src)">
-    </div>
-    {% endfor %}
+            {% for i in range(4) %}
+            <div class="product-image-section">
+                <img id="galleryImg{{ i }}" src="{{ url_for('static', filename='images/' ~ product.image_url) }}"
+                    alt="{{ product.name }}" onclick="openLightbox(this.src)">
+            </div>
+            {% endfor %}
 
-</div>
+        </div>
 
         <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox(event)">
             <button type="button" class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
@@ -41,10 +40,12 @@
     <!-- All product images with their color tags, used by JS to swap photos when a color swatch is clicked -->
     {% set image_entries = [] %}
     {% if product.image_url %}
-        {% set _ = image_entries.append({'url': url_for('static', filename='images/' ~ product.image_url), 'color': none}) %}
+    {% set _ = image_entries.append({'url': url_for('static', filename='images/' ~ product.image_url), 'color': none})
+    %}
     {% endif %}
     {% for img in product.images %}
-        {% set _ = image_entries.append({'url': url_for('static', filename='images/' ~ img.image_url), 'color': img.color}) %}
+    {% set _ = image_entries.append({'url': url_for('static', filename='images/' ~ img.image_url), 'color': img.color})
+    %}
     {% endfor %}
     <script type="application/json" id="productImagesData">{{ image_entries|tojson }}</script>
 
@@ -55,10 +56,10 @@
 
         <p class="product-price-lg">
             {% if product.discount_price %}
-                <span class="original">₹{{ '%.2f' % product.price }}</span>
-                <span class="current on-sale">₹{{ '%.2f' % product.discount_price }}</span>
+            <span class="original">₹{{ '%.2f' % product.price }}</span>
+            <span class="current on-sale">₹{{ '%.2f' % product.discount_price }}</span>
             {% else %}
-                <span class="current">₹{{ '%.2f' % product.price }}</span>
+            <span class="current">₹{{ '%.2f' % product.price }}</span>
             {% endif %}
         </p>
         <p class="tax-note">Inclusive of all taxes</p>
@@ -68,6 +69,8 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="product_id" value="{{ product.id }}">
             <input type="hidden" name="size" id="selectedSizeInput" value="">
+            <input type="hidden" name="color" id="selectedColorInput" value="">
+            <input type="hidden" name="variant_id" id="selectedVariantInput" value="">
 
             {% set colors = product.variants|map(attribute='color')|unique|list %}
             {% if colors and colors[0] %}
@@ -76,10 +79,8 @@
                 <div class="color-swatches">
                     {% for color in colors %}
                     <span class="color-swatch {{ 'selected' if loop.first else '' }}"
-                          style="background-color:{{ color|lower }};"
-                          data-color="{{ color }}"
-                          title="{{ color }}"
-                          onclick="selectColor(this)"></span>
+                        style="background-color:{{ color|lower }};" data-color="{{ color }}" title="{{ color }}"
+                        onclick="selectColor(this)"></span>
                     {% endfor %}
                 </div>
             </div>
@@ -94,8 +95,8 @@
                 </p>
                 <div class="size-options">
                     {% for size in sizes %}
-                    <button type="button" class="size-btn {{ 'selected' if loop.first else '' }}"
-                            data-size="{{ size }}" onclick="selectSize(this)">{{ size }}</button>
+                    <button type="button" class="size-btn {{ 'selected' if loop.first else '' }}" data-size="{{ size }}"
+                        onclick="selectSize(this)">{{ size }}</button>
                     {% endfor %}
                 </div>
             </div>
@@ -103,13 +104,14 @@
 
             <div class="stock-status {{ 'in-stock' if product.stock_quantity > 0 else 'out-of-stock' }}">
                 {% if product.stock_quantity > 0 %}
-                    <i class="bi bi-check-circle-fill"></i> In stock
+                <i class="bi bi-check-circle-fill"></i> In stock
                 {% else %}
-                    <i class="bi bi-x-circle-fill"></i> Out of stock
+                <i class="bi bi-x-circle-fill"></i> Out of stock
                 {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity==0 else ''
+                }}>
                 Add to Bag
             </button>
         </form>
@@ -122,13 +124,14 @@
 
             <div class="stock-status {{ 'in-stock' if product.stock_quantity > 0 else 'out-of-stock' }}">
                 {% if product.stock_quantity > 0 %}
-                    <i class="bi bi-check-circle-fill"></i> In stock
+                <i class="bi bi-check-circle-fill"></i> In stock
                 {% else %}
-                    <i class="bi bi-x-circle-fill"></i> Out of stock
+                <i class="bi bi-x-circle-fill"></i> Out of stock
                 {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity == 0 else '' }}>
+            <button type="submit" class="btn btn-primary btn-block" {{ 'disabled' if product.stock_quantity==0 else ''
+                }}>
                 Add to Bag
             </button>
         </form>
@@ -158,12 +161,12 @@
 
         <div class="tab-panel" id="tab-specs">
             {% if product.technical_specification %}
-                {{ product.technical_specification }}
+            {{ product.technical_specification }}
             {% else %}
-                <ul>
-                    <li>Category: {{ product.category.name }}</li>
-                    <li>Stock available: {{ product.stock_quantity }} units</li>
-                </ul>
+            <ul>
+                <li>Category: {{ product.category.name }}</li>
+                <li>Stock available: {{ product.stock_quantity }} units</li>
+            </ul>
             {% endif %}
         </div>
 
@@ -185,7 +188,8 @@
         {% for rp in related_products %}
         <div class="product-card">
             <a class="card-media" href="{{ url_for('main.product_detail', product_id=rp.id) }}">
-                <img src="{{ url_for('static', filename='images/' ~ rp.image_url) if rp.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}" alt="{{ rp.name }}">
+                <img src="{{ url_for('static', filename='images/' ~ rp.image_url) if rp.image_url else 'https://via.placeholder.com/300x300?text=No+Image' }}"
+                    alt="{{ rp.name }}">
             </a>
             <div class="card-body">
                 <p class="product-eyebrow">{{ rp.category.name }}</p>
@@ -203,55 +207,69 @@
 {% endblock %}
 
 {% block extra_js %}
+
+
+<script type="application/json" id="productVariantsData">
+[
+    {% for variant in product.variants %}
+    {
+        "id": {{ variant.id | tojson }},
+        "color": {{ (variant.color or '') | tojson }},
+        "size": {{ (variant.size or '') | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
 <script>
     const productImages = JSON.parse(document.getElementById('productImagesData').textContent);
     const PLACEHOLDER_IMG = 'https://via.placeholder.com/600x700?text=No+Image';
 
-     function renderGalleryForColor(color) {
-    // Find images specifically belonging to this color
-    let matched = productImages.filter(
-        img => img.color && img.color.toLowerCase() === color.toLowerCase()
-    );
+    function renderGalleryForColor(color) {
+        // Find images specifically belonging to this color
+        let matched = productImages.filter(
+            img => img.color && img.color.toLowerCase() === color.toLowerCase()
+        );
 
-    // If no color-specific image exists, use the general product image
-    if (matched.length === 0) {
-        matched = productImages.filter(img => !img.color);
-    }
+        // If no color-specific image exists, use the general product image
+        if (matched.length === 0) {
+            matched = productImages.filter(img => !img.color);
+        }
 
-    // Last fallback
-    if (matched.length === 0) {
-        matched = productImages;
-    }
+        // Last fallback
+        if (matched.length === 0) {
+            matched = productImages;
+        }
 
-    // Use the FIRST matching image for ALL 4 gallery boxes
-    const selectedImage = matched[0] ? matched[0].url : PLACEHOLDER_IMG;
+        // Use the FIRST matching image for ALL 4 gallery boxes
+        const selectedImage = matched[0] ? matched[0].url : PLACEHOLDER_IMG;
 
-    for (let i = 0; i < 4; i++) {
-        const cell = document.getElementById('galleryImg' + i);
+        for (let i = 0; i < 4; i++) {
+            const cell = document.getElementById('galleryImg' + i);
 
-        if (cell) {
-            cell.src = selectedImage;
+            if (cell) {
+                cell.src = selectedImage;
+            }
         }
     }
-}
-    function selectColor(el) {
-        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-        el.classList.add('selected');
-        document.getElementById('selectedColorLabel').textContent = el.dataset.color;
-        renderGalleryForColor(el.dataset.color);
-    }
 
-    function selectSize(el) {
-        document.querySelectorAll('.size-btn').forEach(s => s.classList.remove('selected'));
-        el.classList.add('selected');
-        const sizeInput = document.getElementById('selectedSizeInput');
-        if (sizeInput) sizeInput.value = el.dataset.size;
-    }
+
+
 
     document.addEventListener('DOMContentLoaded', function () {
         const firstSize = document.querySelector('.size-btn.selected');
-        const sizeInput = document.getElementById('selectedSizeInput');
-        if (firstSize && sizeInput) sizeInput.value = firstSize.dataset.size;
+        const firstColor = document.querySelector('.color-swatch.selected');
+
+        if (firstSize) {
+            document.getElementById('selectedSizeInput').value =
+                firstSize.dataset.size;
+        }
+
+        if (firstColor) {
+            document.getElementById('selectedColorInput').value =
+                firstColor.dataset.color;
+        }
+
+        updateSelectedVariant();
     });
 
     function selectTab(btn, panelId) {
@@ -270,6 +288,62 @@
         if (event.target.id === 'lightboxOverlay' || event.target.classList.contains('lightbox-close')) {
             document.getElementById('lightboxOverlay').classList.remove('open');
         }
+    }
+
+    const variantData = JSON.parse(
+        document.getElementById('productVariantsData').textContent
+    );
+
+    function updateSelectedVariant() {
+        const selectedColor = document.getElementById('selectedColorInput');
+        const selectedSize = document.getElementById('selectedSizeInput');
+        const selectedVariant = document.getElementById('selectedVariantInput');
+
+        if (!selectedColor || !selectedSize || !selectedVariant) {
+            return;
+        }
+
+        const color = selectedColor.value.trim().toLowerCase();
+        const size = selectedSize.value.trim().toLowerCase();
+
+        const match = variantData.find(v =>
+            (v.color || '').trim().toLowerCase() === color &&
+            (v.size || '').trim().toLowerCase() === size
+        );
+
+        selectedVariant.value = match ? match.id : '';
+
+        if (!match && color && size) {
+            console.warn('No matching variant found:', { color, size });
+        }
+    }
+
+    function selectColor(el) {
+        document.querySelectorAll('.color-swatch').forEach(s =>
+            s.classList.remove('selected')
+        );
+
+        el.classList.add('selected');
+
+        const color = el.dataset.color;
+
+        document.getElementById('selectedColorLabel').textContent = color;
+        document.getElementById('selectedColorInput').value = color;
+
+        renderGalleryForColor(color);
+        updateSelectedVariant();
+    }
+
+    function selectSize(el) {
+        document.querySelectorAll('.size-btn').forEach(s =>
+            s.classList.remove('selected')
+        );
+
+        el.classList.add('selected');
+
+        document.getElementById('selectedSizeInput').value = el.dataset.size;
+
+        updateSelectedVariant();
     }
 </script>
 {% endblock %}

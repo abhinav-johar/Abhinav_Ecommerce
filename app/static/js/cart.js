@@ -132,20 +132,47 @@ function removeCartItem(itemId) {
 // the drawer's contents are re-rendered dynamically.
 document.addEventListener('click', function (e) {
     const qtyBtn = e.target.closest('.cart-qty-btn');
+
     if (qtyBtn) {
         const itemId = qtyBtn.dataset.itemId;
         const delta = parseInt(qtyBtn.dataset.delta, 10);
-        const row = qtyBtn.closest('[data-item-id]');
-        const currentQty = parseInt(row.querySelector('span').textContent, 10);
+
+        // Find the actual cart item row.
+        const row = qtyBtn.closest('.cart-item-row');
+
+        if (!row) {
+            console.error('Cart item row not found.');
+            return;
+        }
+
+        // Read the quantity specifically from the quantity control.
+        const quantityElement = row.querySelector('.qty-control > span');
+
+        if (!quantityElement) {
+            console.error('Quantity element not found in cart row:', row);
+            return;
+        }
+
+        const currentQty = parseInt(quantityElement.textContent.trim(), 10);
+
+        if (Number.isNaN(currentQty) || Number.isNaN(delta)) {
+            console.error('Invalid quantity or button delta.');
+            return;
+        }
+
         const newQty = currentQty + delta;
+
         if (newQty >= 1) {
             updateCartItemQuantity(itemId, newQty);
         } else {
             removeCartItem(itemId);
         }
+
+        return;
     }
 
     const removeBtn = e.target.closest('.cart-remove-btn');
+
     if (removeBtn) {
         removeCartItem(removeBtn.dataset.itemId);
     }
