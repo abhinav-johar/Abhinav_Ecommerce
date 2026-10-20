@@ -1,33 +1,38 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from flask import (
+    Blueprint,
+    render_template,
+    redirect,
+    url_for,
+    request,
+    flash,
+    jsonify,
+    make_response,
+)
 from flask_login import current_user
 
 from app.extensions import db
-from app.models import Cart, CartItem, Product, ProductVariant, User
+from app.models import Cart, CartItem, Product, ProductVariant
+from app.utils.guest_cart import (
+    get_or_create_cart,
+    set_guest_cart_cookie,
+)
 
 cart_bp = Blueprint('cart', __name__)
 
 
-def get_current_user():
-    """
-    Returns the real logged-in user if authenticated.
-    Otherwise falls back to a shared 'guest' user, since Cart.user_id is
-    non-nullable in the schema and true session-based guest carts aren't
-    implemented. Login is required at checkout, so this only affects
-    pre-login browsing/cart behavior.
-    """
-    if current_user.is_authenticated:
-        return current_user
-    return User.query.filter_by(email='test@one8.com').first()
+ 
 
 
-def get_or_create_cart(user):
-    cart = Cart.query.filter_by(user_id=user.id).first()
-    if not cart:
-        cart = Cart(user_id=user.id)
-        db.session.add(cart)
-        db.session.commit()
-    return cart
+ 
+def get_owned_cart_item_or_404(item_id):
+    """Return an item only if it belongs to the current user's cart."""
 
+    cart = get_or_create_cart()
+
+    return CartItem.query.filter_by(
+        id=item_id,
+        cart_id=cart.id,
+    ).first_or_404()
 
 def is_ajax_request():
     return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -59,19 +64,20 @@ def serialize_cart(cart):
         'checkout_url': url_for('checkout.checkout'),
     }
 
-
 @cart_bp.route('/data', methods=['GET'])
 def cart_data():
     """JSON snapshot of the current cart, used to populate the drawer."""
-    user = get_current_user()
-    cart = get_or_create_cart(user)
-    return jsonify(serialize_cart(cart))
+
+    cart = get_or_create_cart()
+
+    response = make_response(jsonify(serialize_cart(cart)))
+
+    return set_guest_cart_cookie(response)
 
 
 @cart_bp.route('/', methods=['GET', 'POST'])
 def view_cart():
-    user = get_current_user()
-    cart = get_or_create_cart(user)
+    cart = get_or_create_cart()
 
     # Handle "Add to Cart" POST coming from product_detail.html
     if request.method == 'POST':
@@ -82,16 +88,24 @@ def view_cart():
 
         if not product_id:
             if is_ajax_request():
-                return jsonify(success=False, message='Something went wrong. Please try again.'), 400
+                response = make_response(jsonify(
+                    success=False,
+                    message='Something went wrong. Please try again.'
+                ), 400)
+                return set_guest_cart_cookie(response)
+
             flash('Something went wrong. Please try again.', 'error')
-            return redirect(url_for('cart.view_cart'))
+            response = make_response(redirect(url_for('cart.view_cart')))
+            return set_guest_cart_cookie(response)
 
         product = Product.query.get_or_404(product_id)
 
-        # If the product has variants but the form only sent a size string,
-        # look up the matching variant_id
+        # Find the matching variant if only the size was submitted
         if size and not variant_id:
-            variant = ProductVariant.query.filter_by(product_id=product.id, size=size).first()
+            variant = ProductVariant.query.filter_by(
+                product_id=product.id,
+                size=size
+            ).first()
             variant_id = variant.id if variant else None
 
         if quantity < 1:
@@ -99,26 +113,65 @@ def view_cart():
 
         # Stock check
         available_stock = product.stock_quantity
+
         if variant_id:
-            variant = ProductVariant.query.get(variant_id)
-            if variant:
-                available_stock = variant.stock_quantity
+            variant = ProductVariant.query.filter_by(
+                id=variant_id,
+                product_id=product.id
+            ).first()
+
+            if not variant:
+                response = make_response(jsonify(
+                    success=False,
+                    message='Invalid product variant.'
+                ), 400)
+                return set_guest_cart_cookie(response)
+
+            available_stock = variant.stock_quantity
 
         if available_stock < quantity:
             if is_ajax_request():
-                return jsonify(success=False, message=f'Only {available_stock} left in stock.'), 400
-            flash(f'Only {available_stock} left in stock.', 'error')
-            return redirect(url_for('main.product_detail', product_id=product.id))
+                response = make_response(jsonify(
+                    success=False,
+                    message=f'Only {available_stock} left in stock.'
+                ), 400)
+                return set_guest_cart_cookie(response)
 
-        # Check if this exact product+variant is already in the cart -> increase quantity
+            flash(f'Only {available_stock} left in stock.', 'error')
+            response = make_response(
+                redirect(url_for('main.product_detail', product_id=product.id))
+            )
+            return set_guest_cart_cookie(response)
+
+        # Find an existing item with the same product and variant
         existing_item = CartItem.query.filter_by(
-            cart_id=cart.id, product_id=product.id, variant_id=variant_id
+            cart_id=cart.id,
+            product_id=product.id,
+            variant_id=variant_id
         ).first()
 
         if existing_item:
+            if existing_item.quantity + quantity > available_stock:
+                if is_ajax_request():
+                    response = make_response(jsonify(
+                        success=False,
+                        message=f'Only {available_stock} left in stock.'
+                    ), 400)
+                    return set_guest_cart_cookie(response)
+
+                flash(f'Only {available_stock} left in stock.', 'error')
+                response = make_response(redirect(url_for('cart.view_cart')))
+                return set_guest_cart_cookie(response)
+
             existing_item.quantity += quantity
+
         else:
-            price_to_use = product.discount_price if product.discount_price else product.price
+            price_to_use = (
+                product.discount_price
+                if product.discount_price
+                else product.price
+            )
+
             new_item = CartItem(
                 cart_id=cart.id,
                 product_id=product.id,
@@ -134,31 +187,52 @@ def view_cart():
             cart_snapshot = serialize_cart(cart)
             cart_snapshot['success'] = True
             cart_snapshot['message'] = f'{product.name} added to your bag.'
-            return jsonify(cart_snapshot)
+
+            response = make_response(jsonify(cart_snapshot))
+            return set_guest_cart_cookie(response)
 
         flash(f'{product.name} added to cart.', 'success')
-        return redirect(url_for('cart.view_cart'))
+        response = make_response(redirect(url_for('cart.view_cart')))
+        return set_guest_cart_cookie(response)
 
-    # GET request -> show full cart page (fallback for no-JS / direct visits)
+    # GET request: display the full cart page
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
     subtotal = sum(item.price_at_time * item.quantity for item in cart_items)
 
-    return render_template('cart.html', cart_items=cart_items, subtotal=subtotal)
+    response = make_response(
+        render_template(
+            'cart.html',
+            cart_items=cart_items,
+            subtotal=subtotal,
+        )
+    )
+
+    return set_guest_cart_cookie(response)
 
 
 @cart_bp.route('/update/<int:item_id>', methods=['POST'])
 def update_cart(item_id):
-    item = CartItem.query.get_or_404(item_id)
+    item = get_owned_cart_item_or_404(item_id)
     quantity = request.form.get('quantity', type=int)
 
     if quantity and quantity > 0:
-        # Stock check
-        available = item.variant.stock_quantity if item.variant else item.product.stock_quantity
+        available = (
+            item.variant.stock_quantity
+            if item.variant
+            else item.product.stock_quantity
+        )
+
         if quantity > available:
             if is_ajax_request():
-                return jsonify(success=False, message=f'Only {available} left in stock.'), 400
+                response = make_response(jsonify(
+                    success=False,
+                    message=f'Only {available} left in stock.'
+                ), 400)
+                return set_guest_cart_cookie(response)
+
             flash(f'Only {available} left in stock.', 'error')
-            return redirect(url_for('cart.view_cart'))
+            response = make_response(redirect(url_for('cart.view_cart')))
+            return set_guest_cart_cookie(response)
 
         item.quantity = quantity
         db.session.commit()
@@ -166,28 +240,42 @@ def update_cart(item_id):
         if is_ajax_request():
             cart_snapshot = serialize_cart(item.cart)
             cart_snapshot['success'] = True
-            return jsonify(cart_snapshot)
+
+            response = make_response(jsonify(cart_snapshot))
+            return set_guest_cart_cookie(response)
 
         flash('Cart updated.', 'success')
+
     else:
         if is_ajax_request():
-            return jsonify(success=False, message='Invalid quantity.'), 400
+            response = make_response(jsonify(
+                success=False,
+                message='Invalid quantity.'
+            ), 400)
+            return set_guest_cart_cookie(response)
+
         flash('Invalid quantity.', 'error')
 
-    return redirect(url_for('cart.view_cart'))
+    response = make_response(redirect(url_for('cart.view_cart')))
+    return set_guest_cart_cookie(response)
 
 
 @cart_bp.route('/remove/<int:item_id>', methods=['POST'])
 def remove_from_cart(item_id):
-    item = CartItem.query.get_or_404(item_id)
+    item = get_owned_cart_item_or_404(item_id)
     cart = item.cart
+
     db.session.delete(item)
     db.session.commit()
 
     if is_ajax_request():
         cart_snapshot = serialize_cart(cart)
         cart_snapshot['success'] = True
-        return jsonify(cart_snapshot)
+
+        response = make_response(jsonify(cart_snapshot))
+        return set_guest_cart_cookie(response)
 
     flash('Item removed from cart.', 'success')
-    return redirect(url_for('cart.view_cart'))
+
+    response = make_response(redirect(url_for('cart.view_cart')))
+    return set_guest_cart_cookie(response)

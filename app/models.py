@@ -146,14 +146,38 @@ class Cart(db.Model):
     __tablename__ = 'cart'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+
+    # Registered-user cart; NULL for guest carts
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id'),
+        nullable=True,
+        unique=True
+    )
+
+    # Random identifier for a guest cart
+    guest_token_hash = db.Column(
+        db.String(64),
+        nullable=True,
+        unique=True,
+        index=True
+    )
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    items = db.relationship('CartItem', backref='cart', lazy=True, cascade='all, delete-orphan')
+    items = db.relationship(
+        'CartItem',
+        backref='cart',
+        lazy=True,
+        cascade='all, delete-orphan'
+    )
 
-    def __repr__(self):
-        return f'<Cart user_id={self.user_id}>'
+    __table_args__ = (
+        db.CheckConstraint(
+            'user_id IS NOT NULL OR guest_token_hash IS NOT NULL',
+            name='check_cart_owner'
+        ),
+    )
 
 
 # ==========================================================
